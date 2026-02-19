@@ -211,7 +211,7 @@ Create **Executive Summary Presentation (10 slides):**
 
 1. **Data Access:** I need all CSV files loaded and queryable by Monday AM
 
-2. **Stakeholder Availability:** 
+2. **Stakeholder Availability:**
    - 30-min kickoff Monday (confirm churn definitions, priorities)
    - 30-min Friday presentation (review findings, decide on next phase)
 

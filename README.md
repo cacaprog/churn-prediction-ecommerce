@@ -2,6 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/package%20manager-uv-purple.svg)](https://github.com/astral-sh/uv)
+[![Docker](https://img.shields.io/badge/container-Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 End-to-end machine learning pipeline to predict seller churn for the Olist e-commerce marketplace — enabling proactive retention strategies and measurable revenue protection.
@@ -69,6 +70,8 @@ DataLoader ──► DataPreprocessor ──► ChurnAnalyzer (labels + cohorts)
 
 ## 🚀 Quick Start
 
+### Option A — Local (uv)
+
 ```bash
 # 1. Clone and enter the project
 git clone <repo>
@@ -88,8 +91,80 @@ make dashboard         # → opens dashboard/index.html
 
 # 6. View generated reports
 ls outputs/            # seller_master, risk_scores, segments, cohorts
-ls reports/figures/    # ROC, PR, confusion matrix, feature importance
+ls outputs/figures/    # ROC, PR, confusion matrix, feature importance
 ```
+
+### Option B — Docker
+
+```bash
+# 1. Clone and configure env (same as above)
+git clone <repo>
+cd olist-ecommerce
+cp .env.example .env
+
+# 2. Build the image (one-time, ~2 min)
+make docker-build
+
+# 3. Run the full training pipeline
+make docker-pipeline
+
+# 4. Launch the MLflow UI → http://localhost:5000
+make docker-mlflow
+```
+
+> Raw CSVs are read from `./data/raw/` on your host via a bind mount — no copying into the image required.
+
+---
+
+## 🐳 Docker
+
+The project ships a **multi-stage `Dockerfile`** and a **`docker-compose.yml`** that orchestrates three independent services.
+
+### How it works
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  builder stage (python:3.10-slim + build-essential)      │
+│   └─ uv sync → resolves & installs deps into .venv       │
+└───────────────────────────┬─────────────────────────────┘
+                            │  COPY .venv only
+┌───────────────────────────▼─────────────────────────────┐
+│  runtime stage (python:3.10-slim, no compiler tools)     │
+│   ├─ runs as non-root user (appuser)                     │
+│   ├─ bind mount: ./data  → /app/data  (host CSVs)        │
+│   └─ named volumes: outputs · models · mlruns · logs     │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Services
+
+| Service | Profile | Description |
+|---------|---------|-------------|
+| `pipeline` | `pipeline` | Runs the full training pipeline |
+| `inference` | `inference` | Scores sellers with saved models |
+| `mlflow` | `mlflow` | Experiment tracking UI on port 5000 |
+
+Services use **Compose profiles** — nothing starts by default. Activate the one you need.
+
+### Commands
+
+```bash
+make docker-build      # Build the image (needed once, or after dep changes)
+make docker-pipeline   # Train — reads ./data/raw, writes to volumes
+make docker-inference  # Score — uses saved models from the models volume
+make docker-mlflow     # Start MLflow UI → http://localhost:5000
+make docker-down       # Stop & remove containers
+make docker-clean      # ⚠ Remove containers, volumes AND the image
+```
+
+### When to rebuild
+
+You only need `make docker-build` after:
+- Changing `Dockerfile`
+- Updating `pyproject.toml` or `uv.lock` (dependency changes)
+- Modifying files in `src/`, `scripts/`, or `config/`
+
+Changes to `docker-compose.yml` **never** require a rebuild.
 
 ---
 
@@ -158,7 +233,10 @@ olist-ecommerce/
 ├── 📁 data/                     # (gitignored) — place Olist CSVs here
 │   └── raw/
 ├── .env.example                 # Required environment variables template
-├── Makefile                     # Developer shortcuts
+├── Dockerfile                   # Multi-stage image (builder → runtime)
+├── docker-compose.yml           # pipeline · inference · mlflow services
+├── .dockerignore                # Keeps build context lean
+├── Makefile                     # Developer shortcuts (local + Docker)
 └── requirements.txt             # Pinned dependencies
 ```
 
@@ -190,17 +268,34 @@ Predicts whether an **activated seller** will go dormant (60+ days without an or
 
 ## 🛠️ Developer Commands
 
+### Local
+
 ```bash
-make install          # Install dependencies via uv
-make run-pipeline     # Run the full end-to-end pipeline
-make dashboard        # Generate dashboard/index.html from latest outputs
-make test             # Run unit tests
-make test-coverage    # Run tests with HTML coverage report
-make lint             # flake8 + black check
-make format           # Auto-format with black
-make clean            # Remove __pycache__, .pytest_cache, htmlcov
-make clean-outputs    # Remove generated CSVs, reports, and figures
-make setup-dirs       # Create required directories from scratch
+make install           # Install dependencies via uv
+make run-pipeline      # Run the full end-to-end pipeline
+make run-inference     # Score sellers using saved models
+make dashboard         # Generate dashboard/index.html from latest outputs
+make test              # Run unit tests
+make test-coverage     # Run tests with HTML coverage report
+make lint              # flake8 + black + isort + bandit checks
+make format            # Auto-format with black + isort
+make ci-check          # Full local CI simulation (lint → typecheck → tests)
+make pre-commit-run    # Run all pre-commit hooks over the codebase
+make mlflow-ui         # Open MLflow UI at http://localhost:5000
+make clean             # Remove __pycache__, .pytest_cache, htmlcov
+make clean-outputs     # Remove generated CSVs, reports, and figures
+make setup-dirs        # Create required directories from scratch
+```
+
+### Docker
+
+```bash
+make docker-build      # Build the Docker image
+make docker-pipeline   # Run training pipeline in a container
+make docker-inference  # Run inference in a container
+make docker-mlflow     # Start MLflow UI at http://localhost:5000
+make docker-down       # Stop & remove containers
+make docker-clean      # ⚠ Remove containers, volumes AND the image
 ```
 
 ---

@@ -14,13 +14,13 @@ All configuration is read from .env (see .env.example).
 All outputs are written to the paths defined in config/settings.py.
 """
 
-import sys
 import os
+import sys
 
 # Ensure the project root is on sys.path when run directly
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.pipeline import main
+from src.pipeline import main  # noqa: E402
 
 if __name__ == "__main__":
     main()

@@ -5,23 +5,32 @@ Model Training Module
 Handles training and evaluation of churn prediction models:
 - Pre-activation model (predicts never-activated sellers)
 - Retention model (predicts dormant churn for activated sellers)
+
+MLflow integration
+------------------
+Every candidate model is tracked in a *nested* MLflow run so you can
+compare all three algorithms side-by-side in the UI.  The winning model is
+also registered in the MLflow Model Registry for versioning.
+The *parent* run is opened by `pipeline.main()` before calling into this module.
 """
 
 import logging
-from typing import Dict, List, Tuple, Any
-import pandas as pd
-import numpy as np
+from typing import Any, Dict, List, Tuple
 
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+import mlflow
+import mlflow.sklearn
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import (
-    roc_auc_score,
     accuracy_score,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
+    roc_auc_score,
 )
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
 
 from config.settings import Settings
 
@@ -145,18 +154,33 @@ class ChurnModeler:
         logger.info("-" * 70)
 
         for name, model in models_to_train.items():
-            model.fit(X_train, y_train)
-            y_proba = model.predict_proba(X_test)[:, 1]
+            with mlflow.start_run(run_name=f"pre_activation_{name}", nested=True):
+                mlflow.set_tag("model_stage", "pre_activation")
+                mlflow.set_tag("algorithm", name)
+                mlflow.log_params(model.get_params())
 
-            metrics = self.evaluator.evaluate_model(
-                name, model, X_test, y_test, y_proba
-            )
-            self.evaluator.results[name] = metrics
+                model.fit(X_train, y_train)
+                y_proba = model.predict_proba(X_test)[:, 1]
 
-            logger.info(
-                f"{name:<20} {metrics['auc_roc']:>10.3f} "
-                f"{metrics['accuracy']:>10.3f} {metrics['f1_score']:>10.3f}"
-            )
+                metrics = self.evaluator.evaluate_model(
+                    name, model, X_test, y_test, y_proba
+                )
+                self.evaluator.results[name] = metrics
+
+                mlflow.log_metrics(
+                    {
+                        "auc_roc": metrics["auc_roc"],
+                        "accuracy": metrics["accuracy"],
+                        "f1_score": metrics["f1_score"],
+                        "precision": metrics["precision"],
+                        "recall": metrics["recall"],
+                    }
+                )
+
+                logger.info(
+                    f"{name:<20} {metrics['auc_roc']:>10.3f} "
+                    f"{ metrics['accuracy']:>10.3f} {metrics['f1_score']:>10.3f}"
+                )
 
             # Store feature importance for tree-based models
             if hasattr(model, "feature_importances_"):
@@ -170,6 +194,28 @@ class ChurnModeler:
 
         logger.info("-" * 70)
         logger.info(f"Best Model: {best_name} (AUC-ROC: {best_metrics['auc_roc']:.3f})")
+
+        # Log the winning model in a dedicated child run and register it
+        with mlflow.start_run(run_name="pre_activation_best", nested=True):
+            mlflow.set_tag("model_stage", "pre_activation")
+            mlflow.set_tag("algorithm", best_name)
+            mlflow.set_tag("selected", "best")
+            mlflow.log_param("best_algorithm", best_name)
+            mlflow.log_metrics(
+                {
+                    "best_auc_roc": best_metrics["auc_roc"],
+                    "best_accuracy": best_metrics["accuracy"],
+                    "best_f1_score": best_metrics["f1_score"],
+                    "best_precision": best_metrics["precision"],
+                    "best_recall": best_metrics["recall"],
+                }
+            )
+            mlflow.sklearn.log_model(
+                best_model,
+                artifact_path="model",
+                registered_model_name="olist-pre-activation-churn",
+            )
+            logger.info("  MLflow: pre-activation best model logged & registered")
 
         self.models["pre_activation"] = best_model
 
@@ -233,18 +279,33 @@ class ChurnModeler:
         logger.info("-" * 70)
 
         for name, model in models_to_train.items():
-            model.fit(X_train, y_train)
-            y_proba = model.predict_proba(X_test)[:, 1]
+            with mlflow.start_run(run_name=f"retention_{name}", nested=True):
+                mlflow.set_tag("model_stage", "retention")
+                mlflow.set_tag("algorithm", name)
+                mlflow.log_params(model.get_params())
 
-            metrics = self.evaluator.evaluate_model(
-                name, model, X_test, y_test, y_proba
-            )
-            self.evaluator.results[name] = metrics
+                model.fit(X_train, y_train)
+                y_proba = model.predict_proba(X_test)[:, 1]
 
-            logger.info(
-                f"{name:<20} {metrics['auc_roc']:>10.3f} "
-                f"{metrics['accuracy']:>10.3f} {metrics['f1_score']:>10.3f}"
-            )
+                metrics = self.evaluator.evaluate_model(
+                    name, model, X_test, y_test, y_proba
+                )
+                self.evaluator.results[name] = metrics
+
+                mlflow.log_metrics(
+                    {
+                        "auc_roc": metrics["auc_roc"],
+                        "accuracy": metrics["accuracy"],
+                        "f1_score": metrics["f1_score"],
+                        "precision": metrics["precision"],
+                        "recall": metrics["recall"],
+                    }
+                )
+
+                logger.info(
+                    f"{name:<20} {metrics['auc_roc']:>10.3f} "
+                    f"{metrics['accuracy']:>10.3f} {metrics['f1_score']:>10.3f}"
+                )
 
             if hasattr(model, "feature_importances_"):
                 self.feature_importance[f"{name}_retention"] = pd.DataFrame(
@@ -256,6 +317,28 @@ class ChurnModeler:
 
         logger.info("-" * 70)
         logger.info(f"Best Model: {best_name} (AUC-ROC: {best_metrics['auc_roc']:.3f})")
+
+        # Log the winning model in a dedicated child run and register it
+        with mlflow.start_run(run_name="retention_best", nested=True):
+            mlflow.set_tag("model_stage", "retention")
+            mlflow.set_tag("algorithm", best_name)
+            mlflow.set_tag("selected", "best")
+            mlflow.log_param("best_algorithm", best_name)
+            mlflow.log_metrics(
+                {
+                    "best_auc_roc": best_metrics["auc_roc"],
+                    "best_accuracy": best_metrics["accuracy"],
+                    "best_f1_score": best_metrics["f1_score"],
+                    "best_precision": best_metrics["precision"],
+                    "best_recall": best_metrics["recall"],
+                }
+            )
+            mlflow.sklearn.log_model(
+                best_model,
+                artifact_path="model",
+                registered_model_name="olist-retention-churn",
+            )
+            logger.info("  MLflow: retention best model logged & registered")
 
         self.models["retention"] = best_model
 

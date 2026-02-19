@@ -1,0 +1,71 @@
+# ── Python caches ─────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pycache
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Testing & coverage ─────────────────────────────────────────────────────────
+tests/
+.pytest_cache/
+htmlcov/
+.coverage
+*.coverage
+
+# ── Code quality tooling ───────────────────────────────────────────────────────
+.pre-commit-config.yaml
+.mypy_cache/
+setup.cfg
+
+# ── Data (mount at runtime via volumes, not baked into image) ─────────────────
+data/
+
+# ── Generated artefacts (ditto — use volumes) ─────────────────────────────────
+outputs/
+models/
+mlruns/
+logs/
+dashboard/
+
+# ── Notebooks ─────────────────────────────────────────────────────────────────
+notebooks/
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+docs/
+
+# ── Environment & secrets ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+.git/
+.github/
+.gitignore
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Build artefacts ───────────────────────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+
+# ── Docker itself ─────────────────────────────────────────────────────────────
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ── Log files at root ─────────────────────────────────────────────────────────
+*.log

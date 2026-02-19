@@ -5,13 +5,11 @@ Tests for Churn Analysis Pipeline
 Basic tests to validate business logic correctness and data quality.
 """
 
-import pytest
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+import pytest
 
 from config.settings import Settings, get_settings
-from src.pipeline import ChurnAnalyzer, DataLoader, DataPreprocessor
+from src.pipeline import ChurnAnalyzer
 
 
 class TestChurnDefinitions:

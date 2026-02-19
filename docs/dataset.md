@@ -29,4 +29,3 @@ https://i.imgur.com/JuJMns1.png
 The data is divided in multiple datasets for better understanding and organization. Please refer to the following data schema when working with it: Data Schema
 
 https://i.imgur.com/HRhd2Y0.png
-

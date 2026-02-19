@@ -1,0 +1,98 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Named volumes – for outputs/models/mlruns/logs that are generated at runtime.
+# The raw data directory uses a bind mount instead so the existing host CSVs
+# are visible inside the container without copying them into the image.
+# ─────────────────────────────────────────────────────────────────────────────
+volumes:
+  outputs:
+  models:
+  mlruns:
+  logs:
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Common configuration fragment reused by every service
+    # ─────────────────────────────────────────────────────────────────────────────
+x-common: &common
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: runtime
+  env_file:
+    - .env
+  environment:
+    # Override path settings to match the container's directory layout
+    DATA_PATH: /app/data/raw
+    OUTPUT_PATH: /app/outputs
+    MODELS_PATH: /app/models
+    FIGURES_PATH: /app/outputs/figures
+    PROCESSED_PATH: /app/data/processed
+    # Point MLflow to the shared volume so experiments are persisted
+    MLFLOW_TRACKING_URI: /app/mlruns
+    # Suppress the noisy git-not-found warning from GitPython/MLflow
+    GIT_PYTHON_REFRESH: quiet
+  volumes:
+    # ── bind mount: host ./data → container /app/data (rw so pipeline can
+    #    write processed data to data/processed/) ────────────────────────────
+    - ./data:/app/data
+    # ── named volumes for generated artefacts ─────────────────────────────────
+    - outputs:/app/outputs
+    - models:/app/models
+    - mlruns:/app/mlruns
+    - logs:/app/logs
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Services
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # pipeline – trains the churn models and persists artefacts to volumes
+  # Usage:  make docker-pipeline
+  #         docker compose --profile pipeline run --rm pipeline
+  # ──────────────────────────────────────────────────────────────────────────
+  pipeline:
+    <<: *common
+    container_name: olist_pipeline
+    profiles:
+      - pipeline
+    command: [ "python", "scripts/run_pipeline.py" ]
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # inference – scores new sellers using previously trained models
+  # Usage:  make docker-inference
+  #         docker compose --profile inference run --rm inference
+  # ──────────────────────────────────────────────────────────────────────────
+  inference:
+    <<: *common
+    container_name: olist_inference
+    profiles:
+      - inference
+    command: [ "python", "scripts/run_inference.py" ]
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # mlflow – experiment tracking UI available at http://localhost:5000
+  # Usage:  make docker-mlflow
+  #         docker compose --profile mlflow up mlflow
+  # ──────────────────────────────────────────────────────────────────────────
+  mlflow:
+    <<: *common
+    container_name: olist_mlflow
+    profiles:
+      - mlflow
+    command:
+      - mlflow
+      - ui
+      - --backend-store-uri
+      - /app/mlruns
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5000"
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

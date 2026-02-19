@@ -17,39 +17,20 @@ Author: Cairo Cananea
 Website: cairocananea.com.br
 """
 
+import logging
 import os
 import sys
-import logging
-from typing import Dict, List, Tuple, Optional, Any
-from datetime import datetime
 import warnings
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import (
-    roc_auc_score,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    classification_report,
-    confusion_matrix,
-    roc_curve,
-    precision_recall_curve,
-)
+from datetime import datetime
+from typing import Dict, Optional
 
 import joblib
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
 from config.settings import Settings, get_settings
-from src.validation.schemas import validate_seller_data, validate_risk_scores
 
 warnings.filterwarnings("ignore")
 
@@ -469,9 +450,11 @@ class RiskScorer:
 
         # Combined overall risk
         df["overall_churn_risk"] = df.apply(
-            lambda row: row["never_activated_risk"]
-            if pd.isna(row["dormancy_risk"])
-            else max(row["never_activated_risk"], row["dormancy_risk"]),
+            lambda row: (
+                row["never_activated_risk"]
+                if pd.isna(row["dormancy_risk"])
+                else max(row["never_activated_risk"], row["dormancy_risk"])
+            ),
             axis=1,
         )
 
@@ -522,9 +505,9 @@ class ChurnVisualizer:
         }
 
         colors = ["#FF6B6B", "#FDCB6E", "#6C5CE7"]
-        wedges, texts, autotexts = ax.pie(
-            status_counts.values(),
-            labels=status_counts.keys(),
+        ax.pie(
+            list(status_counts.values()),
+            labels=list(status_counts.keys()),
             autopct="%1.1f%%",
             colors=colors,
             startangle=90,
@@ -743,13 +726,15 @@ class InterventionPrioritizer:
             self.settings.DORMANT_DAYS - intervention_df["days_since_last_sale"]
         )
         intervention_df["urgency"] = intervention_df["days_until_dormant"].apply(
-            lambda x: "Immediate"
-            if x <= 7
-            else "High"
-            if x <= 14
-            else "Medium"
-            if x <= 30
-            else "Low"
+            lambda x: (
+                "Immediate"
+                if x <= 7
+                else "High"
+                if x <= 14
+                else "Medium"
+                if x <= 30
+                else "Low"
+            )
         )
 
         # Sort by priority
@@ -847,8 +832,8 @@ PRIORITY TIERS
             if len(immediate) > 0:
                 report += f"\n🔴 IMMEDIATE ACTION (≤7 days to dormancy): {len(immediate)} sellers"
                 report += f"\n   GMV at Risk: R$ {immediate['total_gmv'].sum():,.2f}"
-                report += f"\n   Top Priority Sellers:\n"
-                for idx, row in immediate.head(5).iterrows():
+                report += "\n   Top Priority Sellers:\n"
+                for _idx, row in immediate.head(5).iterrows():
                     report += f"   - {row['seller_id'][:8]}... | {row['seller_state']} | GMV: R$ {row['total_gmv']:,.0f} | Risk: {row['overall_churn_risk']:.1%}\n"
 
             # High urgency
@@ -863,7 +848,7 @@ PRIORITY TIERS
                 report += f"\n🟡 MEDIUM PRIORITY (15-30 days): {len(medium)} sellers"
                 report += f"\n   GMV at Risk: R$ {medium['total_gmv'].sum():,.2f}\n"
 
-        report += f"""
+        report += """
 
 RECOMMENDED INTERVENTION ACTIONS
 --------------------------------
@@ -909,7 +894,7 @@ END OF REPORT
         )
         with open(report_path, "w") as f:
             f.write(report)
-        logger.info(f"  Exported: intervention_priorities.txt")
+        logger.info("  Exported: intervention_priorities.txt")
 
 
 def main():
@@ -932,13 +917,16 @@ def main():
         13. Generate reports/model_evaluation.md
     """
     import os
+
     import joblib
+    import mlflow
+    import mlflow.sklearn
     import numpy as np
     from sklearn.model_selection import train_test_split
 
+    from src.evaluation import ModelEvaluator
     from src.features import FeatureEngineer
     from src.models import ChurnModeler
-    from src.evaluation import ModelEvaluator
     from src.reports import InsightsReporter
 
     settings = get_settings()
@@ -962,236 +950,274 @@ def main():
         ],
     )
     _logger = logging.getLogger(__name__)
-    _logger.info("=" * 80)
-    _logger.info("OLIST SELLER CHURN ANALYSIS PIPELINE")
-    _logger.info("=" * 80)
-
     # ------------------------------------------------------------------
-    # 1. Data loading & preprocessing
+    # MLflow — configure tracking before any run is opened
     # ------------------------------------------------------------------
-    loader = DataLoader(settings)
-    loader.load_all()
-    loader.parse_dates()
-    master = loader.build_seller_master_table()
+    mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(settings.MLFLOW_EXPERIMENT_NAME)
 
-    preprocessor = DataPreprocessor(settings)
-    master = preprocessor.calculate_seller_activity_metrics(master, loader.data)
-    master = preprocessor.handle_missing_values(master)
+    with mlflow.start_run(run_name="full_pipeline") as _parent_run:
+        _logger.info("=" * 80)
+        _logger.info("OLIST SELLER CHURN ANALYSIS PIPELINE")
+        _logger.info("=" * 80)
 
-    if len(master) == 0:
-        _logger.error("No data loaded. Check your DATA_PATH setting.")
-        return
+        # Log every business-rule / model config as params so every run is
+        # fully reproducible from the MLflow UI alone.
+        mlflow.log_params(
+            {
+                "never_activated_days": settings.NEVER_ACTIVATED_DAYS,
+                "dormant_days": settings.DORMANT_DAYS,
+                "test_size": settings.TEST_SIZE,
+                "random_state": settings.RANDOM_STATE,
+                "cv_folds": settings.CV_FOLDS,
+            }
+        )
 
-    _logger.info(f"\nProcessing {len(master):,} sellers...")
-
-    # ------------------------------------------------------------------
-    # 2. Churn labelling
-    # ------------------------------------------------------------------
-    analyzer = ChurnAnalyzer(settings)
-    master = analyzer.define_churn_labels(master)
-
-    # ------------------------------------------------------------------
-    # 3. Cohort & segment analyses
-    # ------------------------------------------------------------------
-    cohort = analyzer.cohort_analysis(master)
-    segment_analyses: Dict[str, Optional[pd.DataFrame]] = {
-        "business_segment": analyzer.segment_analysis(master, "business_segment"),
-        "lead_behaviour_profile": analyzer.segment_analysis(
-            master, "lead_behaviour_profile"
-        ),
-        "lead_type": analyzer.segment_analysis(master, "lead_type"),
-        "seller_state": analyzer.segment_analysis(master, "seller_state"),
-    }
-
-    model_metrics: Dict[str, Dict] = {}
-    pre_model = ret_model = None
-
-    if len(master) > 10:
-        engineer = FeatureEngineer(settings)
-        evaluator = ModelEvaluator(settings)
+        _logger.info(f"MLflow run started — id: {_parent_run.info.run_id}")
 
         # ------------------------------------------------------------------
-        # 4. Pre-Activation Model
+        # 1. Data loading & preprocessing
         # ------------------------------------------------------------------
-        full_pre_feats = engineer.create_pre_activation_features(master.copy())
-        y_pre = master["never_activated"]
+        loader = DataLoader(settings)
+        loader.load_all()
+        loader.parse_dates()
+        master = loader.build_seller_master_table()
 
-        if len(full_pre_feats) > 10 and y_pre.nunique() > 1:
-            X_pre_train, X_pre_test, y_pre_train, y_pre_test = train_test_split(
-                full_pre_feats,
-                y_pre,
-                test_size=settings.TEST_SIZE,
-                random_state=settings.RANDOM_STATE,
-                stratify=y_pre,
-            )
-            modeler_pre = ChurnModeler(settings)
-            pre_model, _ = modeler_pre.train_pre_activation_model(
-                X_pre_train, y_pre_train
-            )
+        preprocessor = DataPreprocessor(settings)
+        master = preprocessor.calculate_seller_activity_metrics(master, loader.data)
+        master = preprocessor.handle_missing_values(master)
 
-            if pre_model is not None:
-                joblib.dump(
-                    pre_model,
-                    os.path.join(
-                        str(settings.MODELS_PATH), "pre_activation_model.joblib"
-                    ),
-                )
-                fi_pre = (
-                    next(
-                        (
-                            v
-                            for k, v in modeler_pre.feature_importance.items()
-                            if "GradientBoosting" in k or "RandomForest" in k
-                        ),
-                        next(iter(modeler_pre.feature_importance.values()), None),
-                    )
-                    if modeler_pre.feature_importance
-                    else None
-                )
-                model_metrics["pre_activation"] = evaluator.evaluate_model(
-                    pre_model,
-                    X_pre_test,
-                    y_pre_test,
-                    model_name="Pre-Activation Model",
-                    feature_importance=fi_pre,
-                )
+        if len(master) == 0:
+            _logger.error("No data loaded. Check your DATA_PATH setting.")
+            return
+
+        _logger.info(f"\nProcessing {len(master):,} sellers...")
 
         # ------------------------------------------------------------------
-        # 5. Retention Model  (activated sellers only)
+        # 2. Churn labelling
         # ------------------------------------------------------------------
-        activated = master[master["never_activated"] == 0].copy()
-        if len(activated) > 10:
-            full_ret_feats = engineer.create_retention_features(activated)
-            y_ret = activated["dormant"].loc[full_ret_feats.index]
+        analyzer = ChurnAnalyzer(settings)
+        master = analyzer.define_churn_labels(master)
 
-            if y_ret.nunique() > 1:
-                X_ret_train, X_ret_test, y_ret_train, y_ret_test = train_test_split(
-                    full_ret_feats,
-                    y_ret,
+        # ------------------------------------------------------------------
+        # 3. Cohort & segment analyses
+        # ------------------------------------------------------------------
+        cohort = analyzer.cohort_analysis(master)
+        segment_analyses: Dict[str, Optional[pd.DataFrame]] = {
+            "business_segment": analyzer.segment_analysis(master, "business_segment"),
+            "lead_behaviour_profile": analyzer.segment_analysis(
+                master, "lead_behaviour_profile"
+            ),
+            "lead_type": analyzer.segment_analysis(master, "lead_type"),
+            "seller_state": analyzer.segment_analysis(master, "seller_state"),
+        }
+
+        model_metrics: Dict[str, Dict] = {}
+        pre_model = ret_model = None
+
+        if len(master) > 10:
+            engineer = FeatureEngineer(settings)
+            evaluator = ModelEvaluator(settings)
+
+            # ------------------------------------------------------------------
+            # 4. Pre-Activation Model
+            # ------------------------------------------------------------------
+            full_pre_feats = engineer.create_pre_activation_features(master.copy())
+            y_pre = master["never_activated"]
+
+            if len(full_pre_feats) > 10 and y_pre.nunique() > 1:
+                X_pre_train, X_pre_test, y_pre_train, y_pre_test = train_test_split(
+                    full_pre_feats,
+                    y_pre,
                     test_size=settings.TEST_SIZE,
                     random_state=settings.RANDOM_STATE,
-                    stratify=y_ret,
+                    stratify=y_pre,
                 )
-                modeler_ret = ChurnModeler(settings)
-                ret_model, _ = modeler_ret.train_retention_model(
-                    X_ret_train, y_ret_train
+                modeler_pre = ChurnModeler(settings)
+                pre_model, _ = modeler_pre.train_pre_activation_model(
+                    X_pre_train, y_pre_train
                 )
 
-                if ret_model is not None:
+                if pre_model is not None:
                     joblib.dump(
-                        ret_model,
+                        pre_model,
                         os.path.join(
-                            str(settings.MODELS_PATH), "retention_model.joblib"
+                            str(settings.MODELS_PATH), "pre_activation_model.joblib"
                         ),
                     )
-                    fi_ret = (
+                    fi_pre = (
                         next(
                             (
                                 v
-                                for k, v in modeler_ret.feature_importance.items()
+                                for k, v in modeler_pre.feature_importance.items()
                                 if "GradientBoosting" in k or "RandomForest" in k
                             ),
-                            next(iter(modeler_ret.feature_importance.values()), None),
+                            next(iter(modeler_pre.feature_importance.values()), None),
                         )
-                        if modeler_ret.feature_importance
+                        if modeler_pre.feature_importance
                         else None
                     )
-                    model_metrics["retention"] = evaluator.evaluate_model(
-                        ret_model,
-                        X_ret_test,
-                        y_ret_test,
-                        model_name="Retention Model",
-                        feature_importance=fi_ret,
+                    model_metrics["pre_activation"] = evaluator.evaluate_model(
+                        pre_model,
+                        X_pre_test,
+                        y_pre_test,
+                        model_name="Pre-Activation Model",
+                        feature_importance=fi_pre,
                     )
 
-        # Save technical evaluation report
-        evaluator.save_report("model_evaluation.md")
+            # ------------------------------------------------------------------
+            # 5. Retention Model  (activated sellers only)
+            # ------------------------------------------------------------------
+            activated = master[master["never_activated"] == 0].copy()
+            if len(activated) > 10:
+                full_ret_feats = engineer.create_retention_features(activated)
+                y_ret = activated["dormant"].loc[full_ret_feats.index]
 
-        # ------------------------------------------------------------------
-        # 6. Risk scoring — full dataset
-        # ------------------------------------------------------------------
-        if pre_model is not None:
-            _logger.info("\n--- Scoring all sellers ---")
-            master_pre_feats = engineer.create_pre_activation_features(master.copy())
-            master["never_activated_risk"] = pre_model.predict_proba(master_pre_feats)[
-                :, 1
-            ]
+                if y_ret.nunique() > 1:
+                    X_ret_train, X_ret_test, y_ret_train, y_ret_test = train_test_split(
+                        full_ret_feats,
+                        y_ret,
+                        test_size=settings.TEST_SIZE,
+                        random_state=settings.RANDOM_STATE,
+                        stratify=y_ret,
+                    )
+                    modeler_ret = ChurnModeler(settings)
+                    ret_model, _ = modeler_ret.train_retention_model(
+                        X_ret_train, y_ret_train
+                    )
 
-            if ret_model is not None:
-                activated_idx = master[master["never_activated"] == 0].index
-                master_ret_feats = engineer.create_retention_features(
-                    master.loc[activated_idx].copy()
-                ).replace([np.inf, -np.inf], 0)
-                master.loc[activated_idx, "dormancy_risk"] = ret_model.predict_proba(
-                    master_ret_feats
+                    if ret_model is not None:
+                        joblib.dump(
+                            ret_model,
+                            os.path.join(
+                                str(settings.MODELS_PATH), "retention_model.joblib"
+                            ),
+                        )
+                        fi_ret = (
+                            next(
+                                (
+                                    v
+                                    for k, v in modeler_ret.feature_importance.items()
+                                    if "GradientBoosting" in k or "RandomForest" in k
+                                ),
+                                next(
+                                    iter(modeler_ret.feature_importance.values()), None
+                                ),
+                            )
+                            if modeler_ret.feature_importance
+                            else None
+                        )
+                        model_metrics["retention"] = evaluator.evaluate_model(
+                            ret_model,
+                            X_ret_test,
+                            y_ret_test,
+                            model_name="Retention Model",
+                            feature_importance=fi_ret,
+                        )
+
+            # Save technical evaluation report
+            evaluator.save_report("model_evaluation.md")
+
+            # ------------------------------------------------------------------
+            # 6. Risk scoring — full dataset
+            # ------------------------------------------------------------------
+            if pre_model is not None:
+                _logger.info("\n--- Scoring all sellers ---")
+                master_pre_feats = engineer.create_pre_activation_features(
+                    master.copy()
+                )
+                master["never_activated_risk"] = pre_model.predict_proba(
+                    master_pre_feats
                 )[:, 1]
 
-            master["overall_churn_risk"] = master.apply(
-                lambda r: r["never_activated_risk"]
-                if pd.isna(r.get("dormancy_risk"))
-                else max(r["never_activated_risk"], r.get("dormancy_risk", 0)),
-                axis=1,
+                if ret_model is not None:
+                    activated_idx = master[master["never_activated"] == 0].index
+                    master_ret_feats = engineer.create_retention_features(
+                        master.loc[activated_idx].copy()
+                    ).replace([np.inf, -np.inf], 0)
+                    master.loc[
+                        activated_idx, "dormancy_risk"
+                    ] = ret_model.predict_proba(master_ret_feats)[:, 1]
+
+                master["overall_churn_risk"] = master.apply(
+                    lambda r: (
+                        r["never_activated_risk"]
+                        if pd.isna(r.get("dormancy_risk"))
+                        else max(r["never_activated_risk"], r.get("dormancy_risk", 0))
+                    ),
+                    axis=1,
+                )
+                master["risk_category"] = pd.cut(
+                    master["overall_churn_risk"],
+                    bins=[0, 0.3, 0.6, 0.8, 1.0],
+                    labels=["Low", "Medium", "High", "Critical"],
+                )
+
+        # ------------------------------------------------------------------
+        # 7. Export CSVs & legacy text outputs
+        # ------------------------------------------------------------------
+        exporter = ResultsExporter(settings)
+        exporter.export_csv(master, "seller_master.csv")
+        exporter.export_csv(cohort, "cohort_analysis.csv")
+        if "overall_churn_risk" in master.columns:
+            exporter.export_csv(master, "seller_risk_scores.csv")
+        for seg_col, seg_df in segment_analyses.items():
+            if seg_df is not None:
+                exporter.export_csv(seg_df, f"segment_analysis_{seg_col}.csv")
+        exporter.generate_summary_report(master, cohort)
+
+        if "overall_churn_risk" in master.columns:
+            prioritizer = InterventionPrioritizer(settings)
+            intervention_df = prioritizer.generate_intervention_list(master)
+            gains = prioritizer.calculate_business_gains(intervention_df, master)
+            report_text = prioritizer.generate_intervention_report(
+                intervention_df, gains
             )
-            master["risk_category"] = pd.cut(
-                master["overall_churn_risk"],
-                bins=[0, 0.3, 0.6, 0.8, 1.0],
-                labels=["Low", "Medium", "High", "Critical"],
-            )
+            prioritizer.export_intervention_data(intervention_df, report_text)
 
-    # ------------------------------------------------------------------
-    # 7. Export CSVs & legacy text outputs
-    # ------------------------------------------------------------------
-    exporter = ResultsExporter(settings)
-    exporter.export_csv(master, "seller_master.csv")
-    exporter.export_csv(cohort, "cohort_analysis.csv")
-    if "overall_churn_risk" in master.columns:
-        exporter.export_csv(master, "seller_risk_scores.csv")
-    for seg_col, seg_df in segment_analyses.items():
-        if seg_df is not None:
-            exporter.export_csv(seg_df, f"segment_analysis_{seg_col}.csv")
-    exporter.generate_summary_report(master, cohort)
+        # ------------------------------------------------------------------
+        # 8. EDA visualisations
+        # ------------------------------------------------------------------
+        visualizer = ChurnVisualizer(settings)
+        visualizer.plot_churn_distribution(master)
+        visualizer.plot_cohort_analysis(cohort)
+        if "overall_churn_risk" in master.columns:
+            visualizer.plot_risk_distribution(master)
 
-    if "overall_churn_risk" in master.columns:
-        prioritizer = InterventionPrioritizer(settings)
-        intervention_df = prioritizer.generate_intervention_list(master)
-        gains = prioritizer.calculate_business_gains(intervention_df, master)
-        report_text = prioritizer.generate_intervention_report(intervention_df, gains)
-        prioritizer.export_intervention_data(intervention_df, report_text)
+        # ------------------------------------------------------------------
+        # 9. Stakeholder report → reports/churn_insights_report.md
+        # ------------------------------------------------------------------
+        reporter = InsightsReporter(settings)
+        reporter.build(
+            seller_master=master,
+            risk_scores=master,
+            cohort=cohort,
+            segment_analyses=segment_analyses,
+            model_metrics=model_metrics,
+        )
+        reporter.save("churn_insights_report.md")
 
-    # ------------------------------------------------------------------
-    # 8. EDA visualisations
-    # ------------------------------------------------------------------
-    visualizer = ChurnVisualizer(settings)
-    visualizer.plot_churn_distribution(master)
-    visualizer.plot_cohort_analysis(cohort)
-    if "overall_churn_risk" in master.columns:
-        visualizer.plot_risk_distribution(master)
+        # ------------------------------------------------------------------
+        # 10. Log artifacts to MLflow
+        # ------------------------------------------------------------------
+        mlflow.log_artifacts(str(settings.OUTPUT_PATH), artifact_path="outputs")
+        mlflow.log_artifacts(str(settings.MODELS_PATH), artifact_path="saved_models")
 
-    # ------------------------------------------------------------------
-    # 9. Stakeholder report → reports/churn_insights_report.md
-    # ------------------------------------------------------------------
-    reporter = InsightsReporter(settings)
-    reporter.build(
-        seller_master=master,
-        risk_scores=master,
-        cohort=cohort,
-        segment_analyses=segment_analyses,
-        model_metrics=model_metrics,
-    )
-    reporter.save("churn_insights_report.md")
-
-    # ------------------------------------------------------------------
-    # Done
-    # ------------------------------------------------------------------
-    _logger.info("\n" + "=" * 80)
-    _logger.info("PIPELINE COMPLETED SUCCESSFULLY")
-    _logger.info(f"  Outputs  → {settings.OUTPUT_PATH}/")
-    _logger.info(f"    ├── *.csv / *.txt          (data & summaries)")
-    _logger.info(f"    ├── figures/               (ROC, PR, confusion matrix, feature importance)")
-    _logger.info(f"    ├── churn_insights_report.md")
-    _logger.info(f"    └── model_evaluation.md")
-    _logger.info(f"  Models   → {settings.MODELS_PATH}/")
-    _logger.info("=" * 80)
+        # ------------------------------------------------------------------
+        # Done
+        # ------------------------------------------------------------------
+        _logger.info("\n" + "=" * 80)
+        _logger.info("PIPELINE COMPLETED SUCCESSFULLY")
+        _logger.info("  MLflow   → run id: %s", _parent_run.info.run_id)
+        _logger.info("  Outputs  → %s/", settings.OUTPUT_PATH)
+        _logger.info("    ├── *.csv / *.txt          (data & summaries)")
+        _logger.info(
+            "    ├── figures/               (ROC, PR, confusion matrix, feature importance)"
+        )
+        _logger.info("    ├── churn_insights_report.md")
+        _logger.info("    └── model_evaluation.md")
+        _logger.info("  Models   → %s/", settings.MODELS_PATH)
+        _logger.info("=" * 80)
 
 
 if __name__ == "__main__":

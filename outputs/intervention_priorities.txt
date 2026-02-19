@@ -1,7 +1,7 @@
 ================================================================================
 INTERVENTION PRIORITIES - SELLER RETENTION ACTION PLAN
 ================================================================================
-Generated: 2026-02-19 14:58:52
+Generated: 2026-02-19 17:59:31
 
 EXECUTIVE SUMMARY
 -----------------
@@ -27,10 +27,10 @@ PRIORITY TIERS
    GMV at Risk: R$ 31,150.66
    Top Priority Sellers:
    - a63bfbaa... | RJ | GMV: R$ 6,772 | Risk: 99.0%
-   - 9b158575... | RJ | GMV: R$ 4,249 | Risk: 91.9%
-   - 77a515ca... | SP | GMV: R$ 2,217 | Risk: 93.2%
+   - 9b158575... | RJ | GMV: R$ 4,249 | Risk: 91.8%
+   - 77a515ca... | SP | GMV: R$ 2,217 | Risk: 93.5%
    - 56e361f4... | SP | GMV: R$ 1,298 | Risk: 96.0%
-   - b586cd24... | SC | GMV: R$ 1,109 | Risk: 96.3%
+   - b586cd24... | SC | GMV: R$ 1,109 | Risk: 96.5%
 
 🟠 HIGH PRIORITY (8-14 days): 4 sellers
    GMV at Risk: R$ 2,181.74

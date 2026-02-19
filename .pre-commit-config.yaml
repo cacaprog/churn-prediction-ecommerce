@@ -1,0 +1,65 @@
+# ── Pre-commit hook configuration ─────────────────────────────────────────────
+# Install:  uv run pre-commit install
+# Run all:  uv run pre-commit run --all-files
+# Docs:     https://pre-commit.com
+
+repos:
+  # ── General file hygiene ─────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace       # Remove trailing whitespace
+      - id: end-of-file-fixer         # Ensure files end with a newline
+      - id: check-yaml                # Validate YAML syntax
+      - id: check-toml                # Validate TOML syntax
+      - id: check-json                # Validate JSON syntax
+      - id: check-merge-conflict      # Detect unresolved merge conflict markers
+      - id: check-added-large-files   # Block files >500 KB (keeps repo lean)
+        args: ["--maxkb=500"]
+        exclude: ^uv\.lock$           # Lock file is machine-generated; size is expected
+      - id: debug-statements          # Catch leftover pdb / breakpoint() calls
+      - id: mixed-line-ending         # Enforce LF line endings
+        args: ["--fix=lf"]
+
+  # ── Python import sorting ────────────────────────────────────────────────────
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+        args: ["--profile", "black"]  # Keeps isort compatible with Black
+
+  # ── Python code formatter ────────────────────────────────────────────────────
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  # ── Python linter ────────────────────────────────────────────────────────────
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear        # Detects likely bugs and design issues
+          - flake8-comprehensions # Encourages better list/dict/set comprehensions
+
+  # ── Static type checking ─────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        args: ["--ignore-missing-imports", "--no-strict-optional"]
+        additional_dependencies:
+          - pandas-stubs
+          - types-PyYAML
+        files: ^src/          # Only type-check the source package
+
+  # ── Security scanning ────────────────────────────────────────────────────────
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml"]
+        files: ^src/          # Scan source code only, not test helpers

@@ -7,7 +7,7 @@
 
 ### **DISC Behavior Profiles Decoded:**
 - **Eagle (Influence):** Social, persuasive, enthusiastic - likely responsive to relationship-building
-- **Cat (Steadiness):** Patient, reliable, team-oriented - likely needs support and reassurance  
+- **Cat (Steadiness):** Patient, reliable, team-oriented - likely needs support and reassurance
 - **Wolf (Conscientiousness):** Analytical, detail-oriented, quality-focused - likely needs data and processes
 - **Shark (Dominance):** Results-driven, competitive, decisive - likely wants quick wins
 
@@ -37,7 +37,7 @@ I'll structure this as a **4-week sprint** with weekly deliverables. Here's what
 **Tasks:**
 1. **Build master dataset** linking all tables:
    - MQLs → Closed Deals → Sellers → Orders → Customers → Reviews → Products
-   
+
 2. **Data quality audit:**
    - Missing value analysis (especially those 0.0 fields)
    - Date range validation
@@ -84,7 +84,7 @@ I'll structure this as a **4-week sprint** with weekly deliverables. Here's what
 - By product category preference
 - By seller type purchased from
 
-**Deliverable:** 
+**Deliverable:**
 - **Cohort Dashboard** showing retention curves, churn rates by segment
 - **Benchmark Report** with industry standards (I'll use web search for Brazilian e-commerce benchmarks)
 
@@ -181,7 +181,7 @@ I'll create **150+ features** across these categories:
 
 For **every feature**, I'll compare:
 - Active vs. churned (both seller and customer)
-- High performers vs. low performers  
+- High performers vs. low performers
 - Retained vs. at-risk
 
 **Statistical Tests:**
@@ -204,7 +204,7 @@ For **every feature**, I'll compare:
 - Do customers buying from high-review sellers churn less?
 - Does seller churn cause customer churn?
 
-**Deliverable:** 
+**Deliverable:**
 - **EDA Report** (30+ pages) with statistical findings
 - **Insight Summary** (5-page executive brief)
 
@@ -214,7 +214,7 @@ For **every feature**, I'll compare:
 
 **Presentation (90 min):**
 - Top 10 churn drivers for sellers
-- Top 10 churn drivers for customers  
+- Top 10 churn drivers for customers
 - Surprising findings ("Cat" sellers churn 2x more than expected)
 - Segment deep-dives
 - Preview of Week 3 modeling approach
@@ -292,7 +292,7 @@ For each source (organic, paid, social, email, referral):
 
 **SDR/SR Analysis:**
 - Conversion rates by rep
-- Quality of sellers closed (GMV, retention) 
+- Quality of sellers closed (GMV, retention)
 - Time-to-close efficiency
 - **Best practices:** What do top performers do differently?
 
@@ -523,7 +523,7 @@ Let me project realistic outcomes based on industry benchmarks:
   - Additional GMV: 50 × $5K/mo × 12 mo = **$3M annually**
 
 **Customer Retention:**
-- **Convert 10% more one-time buyers to repeat** 
+- **Convert 10% more one-time buyers to repeat**
   - 5,760 customers × $200 LTV = **$1.15M**
 
 - **Extend repeat customer lifetime by 20%**

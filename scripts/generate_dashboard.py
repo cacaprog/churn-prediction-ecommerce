@@ -11,13 +11,10 @@ Usage:
 """
 
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-import joblib
-import numpy as np
 import pandas as pd
 
 # ---------------------------------------------------------------------------
@@ -67,12 +64,34 @@ total_sellers = len(seller_master) if not seller_master.empty else 842
 
 if not seller_master.empty and "churned" in seller_master.columns:
     churn_rate = round(seller_master["churned"].mean() * 100, 1)
-    never_activated = int(seller_master["never_activated"].sum()) if "never_activated" in seller_master.columns else 515
-    dormant = int(seller_master["dormant"].sum()) if "dormant" in seller_master.columns else 201
-    active = int(seller_master["active"].sum()) if "active" in seller_master.columns else 140
-    gmv_at_risk = round(seller_master[seller_master["churned"] == 1]["total_gmv"].sum(), 2) if "total_gmv" in seller_master.columns else 272607.40
-    high_risk = int((seller_master["risk_category"].isin(["High", "Critical"])).sum()) if "risk_category" in seller_master.columns else 669
-    avg_gmv = round(seller_master["total_gmv"].mean(), 2) if "total_gmv" in seller_master.columns else 790.0
+    never_activated = (
+        int(seller_master["never_activated"].sum())
+        if "never_activated" in seller_master.columns
+        else 515
+    )
+    dormant = (
+        int(seller_master["dormant"].sum())
+        if "dormant" in seller_master.columns
+        else 201
+    )
+    active = (
+        int(seller_master["active"].sum()) if "active" in seller_master.columns else 140
+    )
+    gmv_at_risk = (
+        round(seller_master[seller_master["churned"] == 1]["total_gmv"].sum(), 2)
+        if "total_gmv" in seller_master.columns
+        else 272607.40
+    )
+    high_risk = (
+        int((seller_master["risk_category"].isin(["High", "Critical"])).sum())
+        if "risk_category" in seller_master.columns
+        else 669
+    )
+    avg_gmv = (
+        round(seller_master["total_gmv"].mean(), 2)
+        if "total_gmv" in seller_master.columns
+        else 790.0
+    )
 else:
     # Fallback to pre-computed values from analysis_summary.txt
     churn_rate = 85.0
@@ -103,7 +122,16 @@ if not cohort.empty:
     cohort_sellers = cohort_filtered["total_sellers"].tolist()
     cohort_gmv = cohort_filtered["total_gmv"].tolist()
 else:
-    cohort_labels = ["2018-01", "2018-02", "2018-03", "2018-04", "2018-05", "2018-06", "2018-07", "2018-08"]
+    cohort_labels = [
+        "2018-01",
+        "2018-02",
+        "2018-03",
+        "2018-04",
+        "2018-05",
+        "2018-06",
+        "2018-07",
+        "2018-08",
+    ]
     cohort_churn = [90.4, 85.0, 86.4, 86.5, 73.0, 78.9, 81.1, 93.9]
     cohort_activation = [43.8, 40.7, 42.2, 42.5, 51.6, 40.4, 27.0, 6.1]
     cohort_sellers = [73, 113, 147, 207, 122, 57, 37, 33]
@@ -119,7 +147,14 @@ if not seg_business.empty:
     seg_sellers = seg_plot["Total_Sellers"].tolist()
     seg_gmv = seg_plot["Total_GMV"].tolist()
 else:
-    seg_labels = ["home_appliances", "games_consoles", "household_utilities", "health_beauty", "audio_video_electronics", "car_accessories"]
+    seg_labels = [
+        "home_appliances",
+        "games_consoles",
+        "household_utilities",
+        "health_beauty",
+        "audio_video_electronics",
+        "car_accessories",
+    ]
     seg_churn = [57.1, 50.0, 73.2, 83.9, 82.8, 89.6]
     seg_sellers = [7, 2, 71, 93, 64, 77]
     seg_gmv = [26241, 657, 51568, 90747, 50245, 30174]
@@ -130,7 +165,15 @@ if not seg_lead_type.empty:
     lead_churn = seg_lead_type["Churn_Rate_%"].tolist()
     lead_sellers = seg_lead_type["Total_Sellers"].tolist()
 else:
-    lead_labels = ["online_big", "online_top", "online_medium", "industry", "online_small", "offline", "online_beginner"]
+    lead_labels = [
+        "online_big",
+        "online_top",
+        "online_medium",
+        "industry",
+        "online_small",
+        "offline",
+        "online_beginner",
+    ]
     lead_churn = [73.8, 71.4, 83.1, 88.6, 89.6, 94.2, 93.0]
     lead_sellers = [126, 14, 332, 123, 77, 104, 57]
 
@@ -147,7 +190,9 @@ else:
 
 # State analysis (exclude Unknown)
 if not seg_state.empty:
-    state_clean = seg_state[seg_state["Segment"] != "Unknown"].sort_values("Churn_Rate_%")
+    state_clean = seg_state[seg_state["Segment"] != "Unknown"].sort_values(
+        "Churn_Rate_%"
+    )
     state_labels = state_clean["Segment"].tolist()
     state_churn = state_clean["Churn_Rate_%"].tolist()
     state_sellers = state_clean["Total_Sellers"].tolist()
@@ -160,12 +205,24 @@ else:
 # 5. Intervention table data
 # ---------------------------------------------------------------------------
 if not intervention.empty:
-    intervention_cols = ["seller_id", "seller_city", "seller_state", "business_segment",
-                        "lead_behaviour_profile", "total_orders", "total_gmv",
-                        "days_since_last_sale", "overall_churn_risk", "risk_category",
-                        "urgency", "priority_score"]
+    intervention_cols = [
+        "seller_id",
+        "seller_city",
+        "seller_state",
+        "business_segment",
+        "lead_behaviour_profile",
+        "total_orders",
+        "total_gmv",
+        "days_since_last_sale",
+        "overall_churn_risk",
+        "risk_category",
+        "urgency",
+        "priority_score",
+    ]
     available_cols = [c for c in intervention_cols if c in intervention.columns]
-    intervention_records = intervention[available_cols].head(30).to_dict(orient="records")
+    intervention_records = (
+        intervention[available_cols].head(30).to_dict(orient="records")
+    )
     # Truncate seller_id for display
     for r in intervention_records:
         if "seller_id" in r:
@@ -183,8 +240,20 @@ else:
 # 6. Model metrics (try to load from joblib + compute, else use cached)
 # ---------------------------------------------------------------------------
 model_metrics = {
-    "pre_activation": {"roc_auc": 0.82, "f1_score": 0.91, "precision": 0.89, "recall": 0.93, "accuracy": 0.84},
-    "retention": {"roc_auc": 0.77, "f1_score": 0.85, "precision": 0.83, "recall": 0.87, "accuracy": 0.79},
+    "pre_activation": {
+        "roc_auc": 0.82,
+        "f1_score": 0.91,
+        "precision": 0.89,
+        "recall": 0.93,
+        "accuracy": 0.84,
+    },
+    "retention": {
+        "roc_auc": 0.77,
+        "f1_score": 0.85,
+        "precision": 0.83,
+        "recall": 0.87,
+        "accuracy": 0.79,
+    },
 }
 
 # Try loading seller_risk_scores to extract real model performance proxies
@@ -194,17 +263,28 @@ if risk_scores_path.exists():
     if "overall_churn_risk" in rs.columns and "churned" in rs.columns:
         scores = rs["overall_churn_risk"].fillna(0)
         labels = rs["churned"].fillna(0)
-        from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score, accuracy_score
+        from sklearn.metrics import (
+            accuracy_score,
+            f1_score,
+            precision_score,
+            recall_score,
+            roc_auc_score,
+        )
+
         try:
             pred_bin = (scores > 0.5).astype(int)
             model_metrics["combined"] = {
                 "roc_auc": round(roc_auc_score(labels, scores), 3),
                 "f1_score": round(f1_score(labels, pred_bin, zero_division=0), 3),
-                "precision": round(precision_score(labels, pred_bin, zero_division=0), 3),
+                "precision": round(
+                    precision_score(labels, pred_bin, zero_division=0), 3
+                ),
                 "recall": round(recall_score(labels, pred_bin, zero_division=0), 3),
                 "accuracy": round(accuracy_score(labels, pred_bin), 3),
             }
-            print(f"  Computed combined model metrics: AUC={model_metrics['combined']['roc_auc']}")
+            print(
+                f"  Computed combined model metrics: AUC={model_metrics['combined']['roc_auc']}"
+            )
         except Exception as e:
             print(f"  [WARN] Could not compute model metrics: {e}")
 
@@ -285,7 +365,9 @@ if not template_path.exists():
 
 template = template_path.read_text(encoding="utf-8")
 data_json = json.dumps(dashboard_data, ensure_ascii=False, indent=2)
-html = template.replace("/* __DASHBOARD_DATA__ */", f"const DASHBOARD_DATA = {data_json};")
+html = template.replace(
+    "/* __DASHBOARD_DATA__ */", f"const DASHBOARD_DATA = {data_json};"
+)
 
 output_path.write_text(html, encoding="utf-8")
 print(f"\n✅ Dashboard generated → {output_path}")

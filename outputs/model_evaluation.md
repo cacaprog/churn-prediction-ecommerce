@@ -1,6 +1,6 @@
 # Churn Prediction Models — Technical Evaluation Report
 
-_Generated: 2026-02-19 14:58:52_
+_Generated: 2026-02-19 17:59:31_
 
 ---
 
@@ -43,19 +43,19 @@ weighted avg       0.92      0.92      0.92       211
 ## Retention Model — Performance Metrics
 
 - **Accuracy:** 0.549
-- **Precision:** 0.633
-- **Recall:** 0.620
-- **F1 Score:** 0.626
-- **ROC AUC:** 0.577
+- **Precision:** 0.627
+- **Recall:** 0.640
+- **F1 Score:** 0.634
+- **ROC AUC:** 0.579
 
 ```
               precision    recall  f1-score   support
 
-           0       0.42      0.44      0.43        32
-           1       0.63      0.62      0.63        50
+           0       0.42      0.41      0.41        32
+           1       0.63      0.64      0.63        50
 
     accuracy                           0.55        82
-   macro avg       0.53      0.53      0.53        82
+   macro avg       0.52      0.52      0.52        82
 weighted avg       0.55      0.55      0.55        82
 
 ```

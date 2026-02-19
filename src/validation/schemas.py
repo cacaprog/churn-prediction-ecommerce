@@ -3,11 +3,11 @@ Data validation schemas using Pandera.
 Fail fast with clear errors - prevent garbage-in-garbage-out.
 """
 
-import pandera as pa
-from pandera import Column, Check, DataFrameSchema
-import pandas as pd
 from typing import Dict
 
+import pandas as pd
+import pandera as pa
+from pandera import Check, Column, DataFrameSchema
 
 # Schema for the master seller dataset after processing
 seller_master_schema = DataFrameSchema(

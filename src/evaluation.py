@@ -12,26 +12,23 @@ All outputs are written through Settings — no hardcoded paths.
 """
 
 import logging
-import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
+import numpy as np
+import pandas as pd
 import seaborn as sns
-
 from sklearn.metrics import (
+    accuracy_score,
+    auc,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_recall_curve,
     precision_score,
     recall_score,
-    f1_score,
-    accuracy_score,
     roc_curve,
-    auc,
-    confusion_matrix,
-    classification_report,
-    precision_recall_curve,
 )
 
 from config.settings import Settings
@@ -164,8 +161,8 @@ class ModelEvaluator:
             label="Random classifier",
         )
         ax.fill_between(fpr, tpr, alpha=0.08, color="#6C5CE7")
-        ax.set_xlim([0.0, 1.0])
-        ax.set_ylim([0.0, 1.05])
+        ax.set_xlim((0.0, 1.0))
+        ax.set_ylim((0.0, 1.05))
         ax.set_xlabel("False Positive Rate", fontsize=12)
         ax.set_ylabel("True Positive Rate", fontsize=12)
         ax.set_title(f"ROC Curve — {model_name}", fontsize=14, fontweight="bold")
