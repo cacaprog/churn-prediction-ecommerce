@@ -1,0 +1,50 @@
+# Data
+data/
+*.csv
+*.parquet
+*.xlsx
+
+# Models
+models/
+*.joblib
+*.pkl
+*.h5
+
+# Outputs
+output/
+reports/figures/
+reports/*.html
+reports/*.pdf
+
+# Environment
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Build
+build/
+dist/
+*.egg-info/

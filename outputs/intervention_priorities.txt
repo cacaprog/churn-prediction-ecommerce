@@ -1,0 +1,58 @@
+================================================================================
+INTERVENTION PRIORITIES - SELLER RETENTION ACTION PLAN
+================================================================================
+Generated: 2026-02-19 12:41:17
+
+EXECUTIVE SUMMARY
+-----------------
+Active Sellers at High Risk: 33
+Total GMV at Risk: R$ 33,332.40
+Average GMV per at-risk seller: R$ 1,010.07
+
+BUSINESS IMPACT PROJECTION
+--------------------------
+Assumptions:
+- Intervention Success Rate: 25%
+- Projected Retention Period: 3 months of GMV
+
+Projected Outcomes with Intervention:
+- Sellers Saved: 8
+- GMV Protected: R$ 24,999.30
+- ROI Potential: High (intervention cost << GMV at risk)
+
+PRIORITY TIERS
+--------------
+
+🔴 IMMEDIATE ACTION (≤7 days to dormancy): 29 sellers
+   GMV at Risk: R$ 31,150.66
+   Top Priority Sellers:
+   - a63bfbaa... | RJ | GMV: R$ 6,772 | Risk: 99.0%
+   - 9b158575... | RJ | GMV: R$ 4,249 | Risk: 91.9%
+   - 77a515ca... | SP | GMV: R$ 2,217 | Risk: 93.2%
+   - 56e361f4... | SP | GMV: R$ 1,298 | Risk: 96.0%
+   - b586cd24... | SC | GMV: R$ 1,109 | Risk: 96.3%
+
+🟠 HIGH PRIORITY (8-14 days): 4 sellers
+   GMV at Risk: R$ 2,181.74
+
+
+RECOMMENDED INTERVENTION ACTIONS
+--------------------------------
+1. IMMEDIATE (Next 48 hours):
+   - Personal call from Account Manager to top 10 priority sellers
+   - Offer: Dedicated support + platform fee waiver for 1 month
+   - Goal: Understand pain points, provide immediate assistance
+
+2. SHORT-TERM (Next 2 weeks):
+   - Deploy automated email sequence to all High urgency sellers
+   - Include: Success stories, feature tutorials, support resources
+   - Offer: Group webinar with top-performing sellers
+
+3. ONGOING (Monthly):
+   - Review intervention effectiveness (track saved sellers)
+   - Refine targeting based on response rates
+   - Scale successful intervention patterns
+
+================================================================================
+END OF REPORT
+================================================================================

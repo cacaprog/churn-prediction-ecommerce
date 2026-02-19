@@ -1,0 +1,34 @@
+
+================================================================================
+OLIST SELLER CHURN ANALYSIS - SUMMARY REPORT
+================================================================================
+Generated: 2026-02-19 12:41:17
+
+EXECUTIVE SUMMARY
+-----------------
+Total Sellers Analyzed: 842
+Overall Churn Rate: 85.0%
+Revenue at Risk: R$ 272,607.40
+
+CHURN BREAKDOWN
+---------------
+Never Activated: 515 (61.2%)
+Dormant: 201 (23.9%)
+Active: 140 (16.6%)
+
+RISK ASSESSMENT
+---------------
+High/Critical Risk Sellers: 669
+Percentage at High Risk: 79.5%
+
+COHORT ANALYSIS
+---------------
+Cohorts Analyzed: 12
+Average Cohort Churn Rate: 89.6%
+Best Performing Cohort: 2018-05
+
+TOP SEGMENTS BY CHURN RATE
+--------------------------
+See exported CSV files for detailed segment analysis.
+
+================================================================================
