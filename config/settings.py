@@ -11,30 +11,30 @@ from typing import List, Tuple
 
 class Settings(BaseSettings):
     """Centralized configuration for the Olist churn prediction pipeline."""
-    
+
     # Paths
     DATA_PATH: Path = Field(default=Path("./data/raw"))
-    OUTPUT_PATH: Path = Field(default=Path("./output"))
+    OUTPUT_PATH: Path = Field(default=Path("./outputs"))
     MODELS_PATH: Path = Field(default=Path("./models"))
-    REPORTS_PATH: Path = Field(default=Path("./reports"))
-    IMAGES_PATH: Path = Field(default=Path("./output/images"))
+    REPORTS_PATH: Path = Field(default=Path("./outputs"))   # markdown reports alongside CSVs
+    FIGURES_PATH: Path = Field(default=Path("./outputs/figures"))  # all charts
     PROCESSED_PATH: Path = Field(default=Path("./data/processed"))
-    
+
     # Business rules as config
     NEVER_ACTIVATED_DAYS: int = 90
     DORMANT_DAYS: int = 60
-    
+
     # Model Settings
     RANDOM_STATE: int = 42
     TEST_SIZE: float = 0.25
     CV_FOLDS: int = 5
-    
+
     # Visual Settings
     FIG_SIZE: Tuple[int, int] = (12, 6)
     COLOR_PALETTE: List[str] = Field(default_factory=lambda: [
         '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'
     ])
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -46,10 +46,10 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get settings instance, creating directories if needed."""
     settings = Settings()
-    
+
     # Ensure directories exist
-    for path in [settings.OUTPUT_PATH, settings.MODELS_PATH, settings.REPORTS_PATH,
-                 settings.IMAGES_PATH, settings.PROCESSED_PATH]:
+    for path in [settings.OUTPUT_PATH, settings.MODELS_PATH,
+                 settings.FIGURES_PATH, settings.PROCESSED_PATH]:
         path.mkdir(parents=True, exist_ok=True)
-    
+
     return settings

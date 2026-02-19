@@ -51,7 +51,7 @@ class ModelEvaluator:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.report_content: List[str] = []
-        self._figures_path = settings.REPORTS_PATH / "figures"
+        self._figures_path = settings.FIGURES_PATH
         self._figures_path.mkdir(parents=True, exist_ok=True)
 
     # -------------------------------------------------------------------------
@@ -72,7 +72,7 @@ class ModelEvaluator:
         path = self._figures_path / filename
         plt.savefig(path, dpi=150, bbox_inches="tight")
         plt.close()
-        logger.info(f"  Saved figure: reports/figures/{filename}")
+        logger.info(f"  Saved figure: outputs/figures/{filename}")
 
     # -------------------------------------------------------------------------
     # Public API
@@ -279,5 +279,5 @@ class ModelEvaluator:
 
         path = self.settings.REPORTS_PATH / filename
         path.write_text(full_content, encoding="utf-8")
-        logger.info(f"Evaluation report saved: reports/{filename}")
+        logger.info(f"Evaluation report saved: outputs/{filename}")
         return str(path)

@@ -1,50 +1,51 @@
-# Data
+# ── Raw data (never commit Kaggle source data) ────────────────────────────────
 data/
-*.csv
 *.parquet
 *.xlsx
 
-# Models
+# ── Large generated datasets (reproducible from pipeline, not portfolio value) ─
+outputs/seller_master.csv
+outputs/seller_risk_scores.csv
+
+# ── Trained model binaries (large, not human-readable) ────────────────────────
 models/
 *.joblib
 *.pkl
 *.h5
 
-# Outputs
-output/
-reports/figures/
-reports/*.html
-reports/*.pdf
+# ── Dashboard — generated artefact, but commit it (portfolio showpiece) ────────
+# dashboard/index.html is intentionally tracked
 
-# Environment
+# ── Environment & secrets ──────────────────────────────────────────────────────
 .env
 .venv/
 venv/
 __pycache__/
 *.pyc
 
-# IDE
+# ── IDE ────────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 
-# OS
+# ── OS ─────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Jupyter
+# ── Jupyter ────────────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# Logs
+# ── Logs ───────────────────────────────────────────────────────────────────────
+logs/
 *.log
 
-# Testing
+# ── Testing ────────────────────────────────────────────────────────────────────
 .pytest_cache/
 htmlcov/
 .coverage
 
-# Build
+# ── Build ──────────────────────────────────────────────────────────────────────
 build/
 dist/
 *.egg-info/

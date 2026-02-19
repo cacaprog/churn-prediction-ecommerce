@@ -384,5 +384,5 @@ class InsightsReporter:
         path = self.settings.REPORTS_PATH / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(full_content, encoding="utf-8")
-        logger.info(f"Insights report saved: reports/{filename}")
+        logger.info(f"Insights report saved: outputs/{filename}")
         return str(path)

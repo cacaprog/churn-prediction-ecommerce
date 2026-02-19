@@ -1,4 +1,4 @@
-.PHONY: install test test-coverage run-pipeline clean lint format setup-dirs clean-outputs
+.PHONY: install test test-coverage run-pipeline clean lint format setup-dirs clean-outputs dashboard
 
 # Use uv run so that dependencies from uv's virtualenv are resolved automatically
 UV_RUN = PYTHONPATH=. uv run
@@ -27,6 +27,11 @@ lint:
 format:
 	$(UV_RUN) black src/ tests/ scripts/
 
+# Generate the stakeholder dashboard from pipeline outputs
+dashboard:
+	$(UV_RUN) python scripts/generate_dashboard.py
+	@echo "Dashboard -> dashboard/index.html"
+
 clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
@@ -35,9 +40,8 @@ clean:
 
 # Clean generated outputs (keeps raw data and trained models)
 clean-outputs:
-	rm -f output/*.csv output/*.txt
-	rm -f reports/*.md
-	rm -f reports/figures/*.png
+	rm -f outputs/*.csv outputs/*.txt outputs/*.png outputs/figures/*.png
+	rm -f dashboard/index.html
 
 setup-dirs:
-	mkdir -p data/raw data/processed output models reports/figures logs scripts/archive
+	mkdir -p data/raw data/processed outputs/figures models docs

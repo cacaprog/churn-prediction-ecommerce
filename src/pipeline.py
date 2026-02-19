@@ -946,7 +946,7 @@ def main():
     # ------------------------------------------------------------------
     # Logging — write to logs/, not project root
     # ------------------------------------------------------------------
-    logs_dir = settings.REPORTS_PATH.parent / "logs"
+    logs_dir = settings.OUTPUT_PATH.parent / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     log_file = (
         logs_dir / f'churn_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
@@ -1186,12 +1186,11 @@ def main():
     _logger.info("\n" + "=" * 80)
     _logger.info("PIPELINE COMPLETED SUCCESSFULLY")
     _logger.info(f"  Outputs  → {settings.OUTPUT_PATH}/")
-    _logger.info(f"  Reports  → {settings.REPORTS_PATH}/")
+    _logger.info(f"    ├── *.csv / *.txt          (data & summaries)")
+    _logger.info(f"    ├── figures/               (ROC, PR, confusion matrix, feature importance)")
     _logger.info(f"    ├── churn_insights_report.md")
-    _logger.info(f"    ├── model_evaluation.md")
-    _logger.info(f"    └── figures/  (ROC, PR, confusion matrix, feature importance)")
+    _logger.info(f"    └── model_evaluation.md")
     _logger.info(f"  Models   → {settings.MODELS_PATH}/")
-    _logger.info(f"  Logs     → logs/")
     _logger.info("=" * 80)
 
 

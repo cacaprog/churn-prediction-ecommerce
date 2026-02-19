@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Olist Seller Churn Analysis · Dashboard</title>
+    <meta name="description"
+        content="Interactive stakeholder dashboard for Olist e-commerce seller churn prediction." />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #0a0e1a;
+            --surface: #111827;
+            --surface2: #1a2234;
+            --border: rgba(99, 130, 255, 0.12);
+            --text: #e2e8f0;
+            --muted: #8892a4;
+            --accent: #6366f1;
+            --accent2: #818cf8;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --orange: #f97316;
+            --red: #ef4444;
+            --critical: #dc2626;
+            --glow: rgba(99, 102, 241, 0.15);
+            --r: 14px;
+            --r-sm: 8px;
+        }
+
+        html {
+            scroll-behavior: smooth
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99, 102, 241, 0.07) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg)
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px
+        }
+
+        /* Layout */
+        .app {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px 60px
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 0 0;
+            flex-wrap: wrap;
+            gap: 12px
+        }
+
+        .hd-left {
+            display: flex;
+            align-items: center;
+            gap: 14px
+        }
+
+        .logo {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent), #4f46e5);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 24px rgba(99, 102, 241, 0.3)
+        }
+
+        .hd-title h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #fff, var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text
+        }
+
+        .hd-title p {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 2px
+        }
+
+        .hd-right {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: var(--green);
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 100px
+        }
+
+        .badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: .5;
+                transform: scale(1.4)
+            }
+        }
+
+        .gen-at {
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace
+        }
+
+        /* Tab nav */
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            padding: 20px 0 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 28px;
+            overflow-x: auto;
+            scrollbar-width: none
+        }
+
+        .tab-nav::-webkit-scrollbar {
+            display: none
+        }
+
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 18px;
+            border-radius: var(--r-sm) var(--r-sm) 0 0;
+            border: 1px solid transparent;
+            border-bottom: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--muted);
+            background: transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all .18s;
+            position: relative;
+            bottom: -1px
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+            background: var(--surface2)
+        }
+
+        .tab-btn.active {
+            color: var(--accent2);
+            background: var(--surface);
+            border-color: var(--border);
+            border-bottom-color: var(--surface)
+        }
+
+        .tab-btn .tb-icon {
+            font-size: 1rem
+        }
+
+        .tab-panel {
+            display: none
+        }
+
+        .tab-panel.active {
+            display: block
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 22px;
+            transition: border-color .2s
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.25)
+        }
+
+        .card-hd {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 8px
+        }
+
+        .card-title {
+            font-size: .93rem;
+            font-weight: 600
+        }
+
+        .card-sub {
+            font-size: .73rem;
+            color: var(--muted);
+            margin-top: 3px
+        }
+
+        .card-tag {
+            font-size: .67rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 100px;
+            background: var(--glow);
+            color: var(--accent2);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            white-space: nowrap
+        }
+
+        .chart-wrap {
+            position: relative
+        }
+
+        /* Grids */
+        .g2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px
+        }
+
+        .g3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px
+        }
+
+        .g-wide {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px
+        }
+
+        @media(max-width:900px) {
+
+            .g2,
+            .g3,
+            .g-wide {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* KPI grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px
+        }
+
+        .kpi {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: transform .18s, box-shadow .18s, border-color .18s
+        }
+
+        .kpi:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+            border-color: rgba(99, 102, 241, 0.28)
+        }
+
+        .kpi::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--bar, linear-gradient(90deg, var(--accent), var(--accent2)))
+        }
+
+        .kpi.d::before {
+            background: linear-gradient(90deg, var(--red), var(--critical))
+        }
+
+        .kpi.w::before {
+            background: linear-gradient(90deg, var(--yellow), var(--orange))
+        }
+
+        .kpi.g::before {
+            background: linear-gradient(90deg, var(--green), #059669)
+        }
+
+        .kpi.i::before {
+            background: linear-gradient(90deg, #06b6d4, #0891b2)
+        }
+
+        .kpi-icon {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            display: block
+        }
+
+        .kpi-lbl {
+            font-size: .7rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+            margin-bottom: 5px
+        }
+
+        .kpi-val {
+            font-size: 1.65rem;
+            font-weight: 800;
+            letter-spacing: -.03em;
+            line-height: 1;
+            margin-bottom: 6px
+        }
+
+        .kpi.d .kpi-val {
+            color: #fca5a5
+        }
+
+        .kpi.w .kpi-val {
+            color: #fcd34d
+        }
+
+        .kpi.g .kpi-val {
+            color: #6ee7b7
+        }
+
+        .kpi.i .kpi-val {
+            color: #67e8f9
+        }
+
+        .kpi-sub {
+            font-size: .73rem;
+            color: var(--muted)
+        }
+
+        .kpi-glow {
+            position: absolute;
+            bottom: -20px;
+            right: -20px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            filter: blur(28px);
+            opacity: .14
+        }
+
+        .kpi.d .kpi-glow {
+            background: var(--red)
+        }
+
+        .kpi.w .kpi-glow {
+            background: var(--yellow)
+        }
+
+        .kpi.g .kpi-glow {
+            background: var(--green)
+        }
+
+        .kpi.i .kpi-glow {
+            background: #06b6d4
+        }
+
+        /* Insight pills */
+        .pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 24px
+        }
+
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 10px 14px;
+            font-size: .78rem;
+            color: var(--text);
+            flex: 1;
+            min-width: 180px
+        }
+
+        .pill .pi {
+            font-size: 1.1rem
+        }
+
+        .pill .pv {
+            font-weight: 700;
+            color: var(--accent2)
+        }
+
+        .pill .pm {
+            color: var(--muted);
+            font-size: .72rem
+        }
+
+        /* Section label */
+        .sec {
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--accent2);
+            margin: 22px 0 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .sec::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border)
+        }
+
+        /* Model metrics */
+        .model-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 18px
+        }
+
+        .mtab {
+            padding: 6px 14px;
+            border-radius: var(--r-sm);
+            font-size: .76rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            transition: all .15s
+        }
+
+        .mtab.active {
+            background: var(--glow);
+            border-color: var(--accent);
+            color: var(--accent2)
+        }
+
+        .mbars {
+            display: flex;
+            flex-direction: column;
+            gap: 11px
+        }
+
+        .mrow {
+            display: flex;
+            flex-direction: column;
+            gap: 3px
+        }
+
+        .mrow-hd {
+            display: flex;
+            justify-content: space-between;
+            font-size: .76rem
+        }
+
+        .mlbl {
+            color: var(--muted)
+        }
+
+        .mnum {
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace
+        }
+
+        .mtrack {
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden
+        }
+
+        .mfill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s cubic-bezier(.4, 0, .2, 1)
+        }
+
+        .auc {
+            background: linear-gradient(90deg, var(--accent), var(--accent2))
+        }
+
+        .f1 {
+            background: linear-gradient(90deg, var(--green), #059669)
+        }
+
+        .prec {
+            background: linear-gradient(90deg, #06b6d4, #0e7490)
+        }
+
+        .rec {
+            background: linear-gradient(90deg, var(--yellow), var(--orange))
+        }
+
+        .acc {
+            background: linear-gradient(90deg, #a855f7, #7c3aed)
+        }
+
+        /* Risk legend */
+        .risk-legend {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 14px
+        }
+
+        .rl-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: .73rem
+        }
+
+        /* Table */
+        .tbl-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .search {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 8px 14px;
+            color: var(--text);
+            font-size: .8rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color .15s;
+            width: 230px
+        }
+
+        .search:focus {
+            border-color: var(--accent)
+        }
+
+        .search::placeholder {
+            color: var(--muted)
+        }
+
+        .ftags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap
+        }
+
+        .ftag {
+            padding: 5px 11px;
+            border-radius: 100px;
+            font-size: .7rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            transition: all .15s
+        }
+
+        .ftag.fa {
+            color: var(--accent2);
+            border-color: var(--accent);
+            background: var(--glow)
+        }
+
+        .ftag.fc {
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.35)
+        }
+
+        .ftag.fh {
+            color: #fdba74;
+            border-color: rgba(249, 115, 22, 0.35)
+        }
+
+        .ftag.fi {
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.35)
+        }
+
+        .ftag.on {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: var(--accent)
+        }
+
+        .tbl-wrap {
+            overflow-x: auto;
+            border-radius: var(--r);
+            border: 1px solid var(--border)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .78rem
+        }
+
+        thead th {
+            background: var(--surface2);
+            color: var(--muted);
+            font-size: .67rem;
+            font-weight: 600;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            padding: 11px 15px;
+            text-align: left;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid var(--border)
+        }
+
+        thead th:hover {
+            color: var(--text)
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background .1s
+        }
+
+        tbody tr:last-child {
+            border-bottom: none
+        }
+
+        tbody tr:hover {
+            background: var(--surface2)
+        }
+
+        tbody td {
+            padding: 10px 15px;
+            vertical-align: middle
+        }
+
+        .rb {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: .67rem;
+            font-weight: 700;
+            letter-spacing: .04em
+        }
+
+        .rb.Critical {
+            background: rgba(220, 38, 38, .14);
+            color: #fca5a5;
+            border: 1px solid rgba(220, 38, 38, .28)
+        }
+
+        .rb.High {
+            background: rgba(249, 115, 22, .11);
+            color: #fdba74;
+            border: 1px solid rgba(249, 115, 22, .28)
+        }
+
+        .rb.Medium {
+            background: rgba(245, 158, 11, .1);
+            color: #fcd34d;
+            border: 1px solid rgba(245, 158, 11, .28)
+        }
+
+        .rb.Low {
+            background: rgba(16, 185, 129, .1);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, .28)
+        }
+
+        .ub {
+            font-size: .67rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px
+        }
+
+        .ub.Immediate {
+            background: rgba(220, 38, 38, .11);
+            color: #fca5a5
+        }
+
+        .ub.High {
+            background: rgba(249, 115, 22, .11);
+            color: #fdba74
+        }
+
+        .ub.Medium {
+            background: rgba(245, 158, 11, .09);
+            color: #fcd34d
+        }
+
+        .ub.Low {
+            background: rgba(16, 185, 129, .09);
+            color: #6ee7b7
+        }
+
+        .rbar-wrap {
+            min-width: 90px
+        }
+
+        .rbar {
+            height: 4px;
+            background: var(--surface2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 3px
+        }
+
+        .rbar-fill {
+            height: 100%;
+            border-radius: 2px
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .74rem
+        }
+
+        .tbl-count {
+            font-size: .73rem;
+            color: var(--muted);
+            white-space: nowrap
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+            margin-top: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px
+        }
+
+        footer p {
+            font-size: .72rem;
+            color: var(--muted)
+        }
+
+        footer a {
+            color: var(--accent2);
+            text-decoration: none
+        }
+
+        footer a:hover {
+            text-decoration: underline
+        }
+
+        .tech {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap
+        }
+
+        .tp {
+            font-size: .63rem;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 100px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            letter-spacing: .04em
+        }
+
+        /* Fade in */
+        .fi {
+            opacity: 0;
+            transform: translateY(14px);
+            animation: fadeIn .45s ease forwards
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- Header -->
+        <header>
+            <div class="hd-left">
+                <div class="logo">📊</div>
+                <div class="hd-title">
+                    <h1>Olist Seller Churn · Analysis Dashboard</h1>
+                    <p>E-commerce Marketplace · Seller Retention Intelligence</p>
+                </div>
+            </div>
+            <div class="hd-right">
+                <span class="badge"><span class="dot"></span> Pipeline Complete</span>
+                <span class="gen-at" id="gen-at"></span>
+            </div>
+        </header>
+
+        <!-- Tab nav -->
+        <nav class="tab-nav" role="tablist">
+            <button class="tab-btn active" role="tab" onclick="switchTab('overview',this)"><span
+                    class="tb-icon">🏠</span> Overview</button>
+            <button class="tab-btn" role="tab" onclick="switchTab('cohort',this)"><span class="tb-icon">📅</span> Cohort
+                Analysis</button>
+            <button class="tab-btn" role="tab" onclick="switchTab('segments',this)"><span class="tb-icon">🗂️</span>
+                Segmentation</button>
+            <button class="tab-btn" role="tab" onclick="switchTab('models',this)"><span class="tb-icon">🤖</span> Model
+                Performance</button>
+            <button class="tab-btn" role="tab" onclick="switchTab('interventions',this)"><span class="tb-icon">🎯</span>
+                Interventions</button>
+        </nav>
+
+        <!-- ══════════════════ TAB: OVERVIEW ══════════════════ -->
+        <div id="tab-overview" class="tab-panel active">
+            <div class="kpi-grid" id="kpi-grid"></div>
+
+            <p class="sec">Key Insights</p>
+            <div class="pills" id="pills"></div>
+
+            <p class="sec">Seller Status &amp; Risk Distribution</p>
+            <div class="g2">
+                <div class="card fi">
+                    <div class="card-hd">
+                        <div>
+                            <div class="card-title">Seller Status Distribution</div>
+                            <div class="card-sub">By activation &amp; activity state</div>
+                        </div>
+                        <span class="card-tag">All sellers</span>
+                    </div>
+                    <div class="chart-wrap" style="height:260px"><canvas id="statusChart"></canvas></div>
+                </div>
+                <div class="card fi">
+                    <div class="card-hd">
+                        <div>
+                            <div class="card-title">Risk Score Distribution</div>
+                            <div class="card-sub">Low · Medium · High · Critical</div>
+                        </div>
+                        <span class="card-tag">Risk tiers</span>
+                    </div>
+                    <div class="chart-wrap" style="height:220px"><canvas id="riskChart"></canvas></div>
+                    <div class="risk-legend" id="risk-legend"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════ TAB: COHORT ══════════════════ -->
+        <div id="tab-cohort" class="tab-panel">
+            <p class="sec">Churn Rate by Onboarding Cohort</p>
+            <div class="card fi" style="margin-bottom:18px">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">Monthly Cohort Churn vs Activation Rate</div>
+                        <div class="card-sub">Complete cohorts only (pre Sep/2018)</div>
+                    </div>
+                    <span class="card-tag">12 cohorts</span>
+                </div>
+                <div class="chart-wrap" style="height:300px"><canvas id="cohortChart"></canvas></div>
+            </div>
+
+            <p class="sec">GMV &amp; Activation by Cohort</p>
+            <div class="card fi">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">Revenue Generated vs Activation Rate</div>
+                        <div class="card-sub">Bar = GMV · Line = Activation Rate</div>
+                    </div>
+                    <span class="card-tag">R$ GMV</span>
+                </div>
+                <div class="chart-wrap" style="height:280px"><canvas id="cohortGmvChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ══════════════════ TAB: SEGMENTS ══════════════════ -->
+        <div id="tab-segments" class="tab-panel">
+            <p class="sec">Business Segment Analysis</p>
+            <div class="card fi" style="margin-bottom:18px">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">Churn Rate by Business Segment</div>
+                        <div class="card-sub">Top 12 segments by seller count — colour = risk level</div>
+                    </div>
+                    <span class="card-tag">Top 12</span>
+                </div>
+                <div class="chart-wrap" style="height:340px"><canvas id="segmentChart"></canvas></div>
+            </div>
+
+            <p class="sec">Lead Type &amp; Behaviour Profile</p>
+            <div class="g2">
+                <div class="card fi">
+                    <div class="card-hd">
+                        <div>
+                            <div class="card-title">Churn Rate by Lead Type</div>
+                            <div class="card-sub">Funnel stage at acquisition</div>
+                        </div>
+                        <span class="card-tag">Lead Type</span>
+                    </div>
+                    <div class="chart-wrap" style="height:240px"><canvas id="leadTypeChart"></canvas></div>
+                </div>
+                <div class="card fi">
+                    <div class="card-hd">
+                        <div>
+                            <div class="card-title">Behaviour Profile vs Churn</div>
+                            <div class="card-sub">Cat · Wolf · Eagle · Shark</div>
+                        </div>
+                        <span class="card-tag">Behaviour</span>
+                    </div>
+                    <div class="chart-wrap" style="height:240px"><canvas id="profileChart"></canvas></div>
+                </div>
+            </div>
+
+            <p class="sec">Geographic Analysis</p>
+            <div class="card fi">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">Churn Rate by Brazilian State</div>
+                        <div class="card-sub">Excludes sellers with unknown state</div>
+                    </div>
+                    <span class="card-tag">Geography</span>
+                </div>
+                <div class="chart-wrap" style="height:220px"><canvas id="stateChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ══════════════════ TAB: MODELS ══════════════════ -->
+        <div id="tab-models" class="tab-panel">
+            <p class="sec">ML Model Evaluation</p>
+            <div class="g2">
+                <div class="card fi">
+                    <div class="card-hd">
+                        <div>
+                            <div class="card-title">Model Performance Metrics</div>
+                            <div class="card-sub">Gradient Boosting · best-of-3 selection</div>
+                        </div>
+                    </div>
+                    <div class="model-tabs" id="model-tabs"></div>
+                    <div class="mbars" id="mbars"></div>
+                </div>
+                <div class="card fi">
+                    <div class="card-hd">
+                        <div>
+                            <div class="card-title">Model Comparison</div>
+                            <div class="card-sub">All models side by side — ROC AUC</div>
+                        </div>
+                        <span class="card-tag">AUC</span>
+                    </div>
+                    <div class="chart-wrap" style="height:260px"><canvas id="modelCompChart"></canvas></div>
+                </div>
+            </div>
+
+            <p class="sec">Pipeline Architecture</p>
+            <div class="card fi">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">Two-Stage Churn Strategy</div>
+                        <div class="card-sub">Pre-Activation model + Retention model → combined risk score</div>
+                    </div>
+                </div>
+                <div
+                    style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:4px">
+                    <div
+                        style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px">
+                        <div
+                            style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">
+                            Stage 1 · Pre-Activation</div>
+                        <div style="font-weight:700;color:var(--accent2);margin-bottom:6px">Never-Activated Risk</div>
+                        <div style="font-size:.78rem;color:var(--muted)">Predicts whether a newly-won seller will fail
+                            to place their first order within 90 days. Features: lead behaviour, business segment, sales
+                            cycle duration.</div>
+                    </div>
+                    <div
+                        style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px">
+                        <div
+                            style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">
+                            Stage 2 · Retention</div>
+                        <div style="font-weight:700;color:var(--green);margin-bottom:6px">Dormancy Risk</div>
+                        <div style="font-size:.78rem;color:var(--muted)">Identifies active sellers at risk of going
+                            dormant (60+ days idle). Features: GMV trend, order frequency, days since last sale,
+                            customer diversity.</div>
+                    </div>
+                    <div
+                        style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px">
+                        <div
+                            style="font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">
+                            Combined Score</div>
+                        <div style="font-weight:700;color:var(--yellow);margin-bottom:6px">Overall Churn Risk</div>
+                        <div style="font-size:.78rem;color:var(--muted)">max(pre_activation_risk, dormancy_risk) — a
+                            unified score that drives the risk category (Low / Medium / High / Critical) and
+                            intervention prioritization.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════ TAB: INTERVENTIONS ══════════════════ -->
+        <div id="tab-interventions" class="tab-panel">
+            <p class="sec">Priority Action List</p>
+
+            <!-- summary cards -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"
+                id="int-summary"></div>
+
+            <div class="tbl-controls">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input class="search" id="tbl-search" type="text" placeholder="🔍  Search seller, city, segment…" />
+                    <div class="ftags">
+                        <button class="ftag fa" data-f="all" onclick="setF('all',this)">All</button>
+                        <button class="ftag fc" data-f="Critical" onclick="setF('Critical',this)">🔴 Critical</button>
+                        <button class="ftag fh" data-f="High" onclick="setF('High',this)">🟠 High</button>
+                        <button class="ftag fi" data-f="Immediate" onclick="setF('Immediate',this)">⚡ Immediate</button>
+                    </div>
+                </div>
+                <span class="tbl-count" id="tbl-count"></span>
+            </div>
+
+            <div class="tbl-wrap">
+                <table id="int-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortT('seller_id_short')">Seller ID</th>
+                            <th onclick="sortT('seller_city')">City</th>
+                            <th onclick="sortT('seller_state')">State</th>
+                            <th onclick="sortT('business_segment')">Segment</th>
+                            <th onclick="sortT('lead_behaviour_profile')">Profile</th>
+                            <th onclick="sortT('total_orders')">Orders</th>
+                            <th onclick="sortT('total_gmv')">GMV (R$)</th>
+                            <th onclick="sortT('days_since_last_sale')">Days Idle</th>
+                            <th onclick="sortT('overall_churn_risk')">Risk Score</th>
+                            <th onclick="sortT('risk_category')">Category</th>
+                            <th onclick="sortT('urgency')">Urgency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbl-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div>
+                <p>Built by <a href="https://cairocananea.com.br" target="_blank">Cairo Cananea</a> · Olist E-commerce
+                    Seller Churn Prediction</p>
+                <p style="margin-top:3px">Data: <a href="https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce"
+                        target="_blank">Olist Brazilian E-Commerce · Kaggle</a></p>
+            </div>
+            <div class="tech">
+                <span class="tp">Python</span><span class="tp">scikit-learn</span><span class="tp">Gradient
+                    Boosting</span>
+                <span class="tp">Pandas</span><span class="tp">Pydantic</span><span class="tp">Chart.js</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const DASHBOARD_DATA = {
+  "generated_at": "2026-02-19 14:59",
+  "kpi": {
+    "total_sellers": 842,
+    "churn_rate": 85.0,
+    "never_activated": 515,
+    "dormant": 201,
+    "active": 140,
+    "gmv_at_risk": 272607.4,
+    "high_risk": 669,
+    "avg_gmv": 800.48,
+    "high_risk_pct": 79.5,
+    "projected_gmv_saved": 204455.55
+  },
+  "risk_dist": {
+    "labels": [
+      "Low",
+      "Medium",
+      "High",
+      "Critical"
+    ],
+    "values": [
+      59,
+      114,
+      291,
+      378
+    ]
+  },
+  "status_dist": {
+    "labels": [
+      "Never Activated",
+      "Dormant",
+      "Active"
+    ],
+    "values": [
+      515,
+      201,
+      140
+    ]
+  },
+  "cohort": {
+    "labels": [
+      "2017-12",
+      "2018-01",
+      "2018-02",
+      "2018-03",
+      "2018-04",
+      "2018-05",
+      "2018-06",
+      "2018-07",
+      "2018-08"
+    ],
+    "churn": [
+      100.0,
+      90.4,
+      85.0,
+      86.4,
+      86.5,
+      73.0,
+      78.9,
+      81.1,
+      93.9
+    ],
+    "activation": [
+      33.3,
+      43.8,
+      40.7,
+      42.2,
+      42.5,
+      51.6,
+      40.4,
+      27.0,
+      6.1
+    ],
+    "sellers": [
+      3,
+      73,
+      113,
+      147,
+      207,
+      122,
+      57,
+      37,
+      33
+    ],
+    "gmv": [
+      863.0,
+      49362.0,
+      240417.0,
+      148627.0,
+      128625.0,
+      59061.0,
+      39303.0,
+      7259.0,
+      489.0
+    ]
+  },
+  "segment": {
+    "labels": [
+      "household_utilities",
+      "pet",
+      "bags_backpacks",
+      "audio_video_electronics",
+      "health_beauty",
+      "sports_leisure",
+      "construction_tools_house_garden",
+      "home_decor",
+      "car_accessories",
+      "food_drink",
+      "food_supplement",
+      "computers"
+    ],
+    "churn": [
+      73.2,
+      80.0,
+      81.8,
+      82.8,
+      83.9,
+      84.0,
+      85.5,
+      86.7,
+      89.6,
+      92.3,
+      92.9,
+      94.1
+    ],
+    "sellers": [
+      71,
+      30,
+      22,
+      64,
+      93,
+      25,
+      69,
+      105,
+      77,
+      26,
+      28,
+      34
+    ],
+    "gmv": [
+      51569.0,
+      40499.0,
+      14234.0,
+      50245.0,
+      90748.0,
+      16322.0,
+      32189.0,
+      43995.0,
+      30175.0,
+      3922.0,
+      10619.0,
+      11772.0
+    ]
+  },
+  "lead_type": {
+    "labels": [
+      "other",
+      "offline",
+      "online_beginner",
+      "online_small",
+      "industry",
+      "Unknown",
+      "online_medium",
+      "online_big",
+      "online_top"
+    ],
+    "churn": [
+      100.0,
+      94.2,
+      93.0,
+      89.6,
+      88.6,
+      83.3,
+      83.1,
+      73.8,
+      71.4
+    ],
+    "sellers": [
+      3,
+      104,
+      57,
+      77,
+      123,
+      6,
+      332,
+      126,
+      14
+    ]
+  },
+  "profile": {
+    "labels": [
+      "Unknown",
+      "shark",
+      "eagle",
+      "wolf",
+      "cat"
+    ],
+    "churn": [
+      87.6,
+      87.5,
+      86.2,
+      84.2,
+      83.3
+    ],
+    "avg_gmv": [
+      1309.0,
+      1965.0,
+      738.0,
+      225.0,
+      694.0
+    ]
+  },
+  "state": {
+    "labels": [
+      "PB",
+      "CE",
+      "SP",
+      "SC",
+      "RJ",
+      "MG",
+      "ES",
+      "RS",
+      "PR",
+      "GO",
+      "BA",
+      "DF",
+      "PE"
+    ],
+    "churn": [
+      0.0,
+      50.0,
+      62.5,
+      65.2,
+      65.4,
+      69.2,
+      75.0,
+      78.9,
+      81.2,
+      85.7,
+      100.0,
+      100.0,
+      100.0
+    ],
+    "sellers": [
+      1,
+      2,
+      232,
+      23,
+      26,
+      26,
+      4,
+      19,
+      32,
+      7,
+      3,
+      4,
+      1
+    ]
+  },
+  "intervention": [
+    {
+      "seller_id": "a63bfbaa882c8f4542891b4e2246cc7f",
+      "seller_city": "niteroi",
+      "seller_state": "RJ",
+      "business_segment": "health_beauty",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 7.0,
+      "total_gmv": 6772.0,
+      "days_since_last_sale": 54.0,
+      "overall_churn_risk": 99.0,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.994,
+      "seller_id_short": "a63bfbaa…"
+    },
+    {
+      "seller_id": "9b1585752613ec342d03bbab9997ec48",
+      "seller_city": "rio de janeiro",
+      "seller_state": "RJ",
+      "business_segment": "car_accessories",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 3.0,
+      "total_gmv": 4248.98,
+      "days_since_last_sale": 59.0,
+      "overall_churn_risk": 91.9,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.939,
+      "seller_id_short": "9b158575…"
+    },
+    {
+      "seller_id": "77a515caa36327151d1cc6c32a9f00e1",
+      "seller_city": "diadema",
+      "seller_state": "SP",
+      "business_segment": "stationery",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 26.0,
+      "total_gmv": 2217.39,
+      "days_since_last_sale": 55.0,
+      "overall_churn_risk": 93.2,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.923,
+      "seller_id_short": "77a515ca…"
+    },
+    {
+      "seller_id": "56e361f411e38dcef17cdc2a3d99628b",
+      "seller_city": "guarulhos",
+      "seller_state": "SP",
+      "business_segment": "audio_video_electronics",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 5.0,
+      "total_gmv": 1298.0,
+      "days_since_last_sale": 55.0,
+      "overall_churn_risk": 96.0,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.903,
+      "seller_id_short": "56e361f4…"
+    },
+    {
+      "seller_id": "11fb6f6d341adbe19e81733701704635",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "home_decor",
+      "lead_behaviour_profile": "wolf",
+      "total_orders": 3.0,
+      "total_gmv": 1197.0,
+      "days_since_last_sale": 52.0,
+      "overall_churn_risk": 96.6,
+      "risk_category": "Critical",
+      "urgency": "High",
+      "priority_score": 0.882,
+      "seller_id_short": "11fb6f6d…"
+    },
+    {
+      "seller_id": "b586cd24c010a13916af621b0325fbba",
+      "seller_city": "rio do sul",
+      "seller_state": "SC",
+      "business_segment": "home_decor",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 6.0,
+      "total_gmv": 1108.94,
+      "days_since_last_sale": 55.0,
+      "overall_churn_risk": 96.3,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.869,
+      "seller_id_short": "b586cd24…"
+    },
+    {
+      "seller_id": "723cd880edaacdb998898b67c8f9da30",
+      "seller_city": "ibitinga",
+      "seller_state": "SP",
+      "business_segment": "bed_bath_table",
+      "lead_behaviour_profile": "Unknown",
+      "total_orders": 11.0,
+      "total_gmv": 2136.53,
+      "days_since_last_sale": 58.0,
+      "overall_churn_risk": 83.7,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.854,
+      "seller_id_short": "723cd880…"
+    },
+    {
+      "seller_id": "ffc470761de7d0232558ba5e786e57b7",
+      "seller_city": "guarulhos",
+      "seller_state": "SP",
+      "business_segment": "construction_tools_house_garden",
+      "lead_behaviour_profile": "Unknown",
+      "total_orders": 28.0,
+      "total_gmv": 1649.01,
+      "days_since_last_sale": 60.0,
+      "overall_churn_risk": 81.0,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.826,
+      "seller_id_short": "ffc47076…"
+    },
+    {
+      "seller_id": "e5cbe890e679490127e9a390b46bbd20",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "food_supplement",
+      "lead_behaviour_profile": "eagle",
+      "total_orders": 2.0,
+      "total_gmv": 908.99,
+      "days_since_last_sale": 58.0,
+      "overall_churn_risk": 89.8,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.818,
+      "seller_id_short": "e5cbe890…"
+    },
+    {
+      "seller_id": "64c9a1db4e73e19aaafd3286dc448c96",
+      "seller_city": "curitiba",
+      "seller_state": "PR",
+      "business_segment": "household_utilities",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 1.0,
+      "total_gmv": 439.0,
+      "days_since_last_sale": 60.0,
+      "overall_churn_risk": 99.0,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.788,
+      "seller_id_short": "64c9a1db…"
+    },
+    {
+      "seller_id": "5bc24d989e71e93c33e50a7782431b0e",
+      "seller_city": "campo do meio",
+      "seller_state": "MG",
+      "business_segment": "car_accessories",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 17.0,
+      "total_gmv": 3148.0,
+      "days_since_last_sale": 56.0,
+      "overall_churn_risk": 65.5,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.769,
+      "seller_id_short": "5bc24d98…"
+    },
+    {
+      "seller_id": "88ef59b51bdaa941d10a853429f2b6ce",
+      "seller_city": "guaratuba",
+      "seller_state": "PR",
+      "business_segment": "audio_video_electronics",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 2.0,
+      "total_gmv": 252.9,
+      "days_since_last_sale": 59.0,
+      "overall_churn_risk": 98.9,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.739,
+      "seller_id_short": "88ef59b5…"
+    },
+    {
+      "seller_id": "1961c3e1272bfeceb05d0b78b5bbfdaf",
+      "seller_city": "guarulhos",
+      "seller_state": "SP",
+      "business_segment": "games_consoles",
+      "lead_behaviour_profile": "eagle, cat",
+      "total_orders": 2.0,
+      "total_gmv": 657.0,
+      "days_since_last_sale": 59.0,
+      "overall_churn_risk": 83.1,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.729,
+      "seller_id_short": "1961c3e1…"
+    },
+    {
+      "seller_id": "751e274377499a8503fd6243ad9c56f6",
+      "seller_city": "campinas",
+      "seller_state": "SP",
+      "business_segment": "audio_video_electronics",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 1.0,
+      "total_gmv": 218.0,
+      "days_since_last_sale": 57.0,
+      "overall_churn_risk": 97.5,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.706,
+      "seller_id_short": "751e2743…"
+    },
+    {
+      "seller_id": "cb6c9f5888a7a090c75beaf615925792",
+      "seller_city": "vila velha",
+      "seller_state": "ES",
+      "business_segment": "construction_tools_house_garden",
+      "lead_behaviour_profile": "eagle",
+      "total_orders": 11.0,
+      "total_gmv": 779.89,
+      "days_since_last_sale": 58.0,
+      "overall_churn_risk": 72.0,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.687,
+      "seller_id_short": "cb6c9f58…"
+    },
+    {
+      "seller_id": "788e857f317e53de488d393e65a80f45",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "bags_backpacks",
+      "lead_behaviour_profile": "wolf",
+      "total_orders": 11.0,
+      "total_gmv": 1210.0,
+      "days_since_last_sale": 56.0,
+      "overall_churn_risk": 60.2,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.676,
+      "seller_id_short": "788e857f…"
+    },
+    {
+      "seller_id": "61b18775be84fb700a6b2d0ba097bf66",
+      "seller_city": "araraquara",
+      "seller_state": "SP",
+      "business_segment": "pet",
+      "lead_behaviour_profile": "eagle",
+      "total_orders": 4.0,
+      "total_gmv": 334.5,
+      "days_since_last_sale": 56.0,
+      "overall_churn_risk": 85.7,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.672,
+      "seller_id_short": "61b18775…"
+    },
+    {
+      "seller_id": "e250d617a0ad591ba9bd663e584a895d",
+      "seller_city": "guarulhos",
+      "seller_state": "SP",
+      "business_segment": "home_decor",
+      "lead_behaviour_profile": "Unknown",
+      "total_orders": 8.0,
+      "total_gmv": 904.12,
+      "days_since_last_sale": 57.0,
+      "overall_churn_risk": 61.2,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.634,
+      "seller_id_short": "e250d617…"
+    },
+    {
+      "seller_id": "0a85ebe4e328db81ac9109781205e2f7",
+      "seller_city": "jundiai",
+      "seller_state": "SP",
+      "business_segment": "home_decor",
+      "lead_behaviour_profile": "eagle",
+      "total_orders": 12.0,
+      "total_gmv": 667.9,
+      "days_since_last_sale": 54.0,
+      "overall_churn_risk": 60.2,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.604,
+      "seller_id_short": "0a85ebe4…"
+    },
+    {
+      "seller_id": "ed8cb7b190ceb6067227478e48cf8dde",
+      "seller_city": "santos",
+      "seller_state": "SP",
+      "business_segment": "home_appliances",
+      "lead_behaviour_profile": "wolf",
+      "total_orders": 15.0,
+      "total_gmv": 573.5,
+      "days_since_last_sale": 51.0,
+      "overall_churn_risk": 61.8,
+      "risk_category": "High",
+      "urgency": "High",
+      "priority_score": 0.589,
+      "seller_id_short": "ed8cb7b1…"
+    },
+    {
+      "seller_id": "f22a247b79dd22ecd91dc8e3b2a1b07c",
+      "seller_city": "itaquaquecetuba",
+      "seller_state": "SP",
+      "business_segment": "health_beauty",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 8.0,
+      "total_gmv": 439.94,
+      "days_since_last_sale": 54.0,
+      "overall_churn_risk": 63.8,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.589,
+      "seller_id_short": "f22a247b…"
+    },
+    {
+      "seller_id": "7c9130f5f3729edd32aa059141d92484",
+      "seller_city": "garca",
+      "seller_state": "SP",
+      "business_segment": "computers",
+      "lead_behaviour_profile": "Unknown",
+      "total_orders": 3.0,
+      "total_gmv": 126.0,
+      "days_since_last_sale": 55.0,
+      "overall_churn_risk": 86.9,
+      "risk_category": "Critical",
+      "urgency": "Immediate",
+      "priority_score": 0.582,
+      "seller_id_short": "7c9130f5…"
+    },
+    {
+      "seller_id": "2d2322d842118867781fc737e96d59a1",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "household_utilities",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 8.0,
+      "total_gmv": 176.4,
+      "days_since_last_sale": 52.0,
+      "overall_churn_risk": 81.4,
+      "risk_category": "Critical",
+      "urgency": "High",
+      "priority_score": 0.561,
+      "seller_id_short": "2d2322d8…"
+    },
+    {
+      "seller_id": "4a23adac87cf538689fa600d976f78b2",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "health_beauty",
+      "lead_behaviour_profile": "wolf",
+      "total_orders": 3.0,
+      "total_gmv": 405.0,
+      "days_since_last_sale": 56.0,
+      "overall_churn_risk": 62.8,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.558,
+      "seller_id_short": "4a23adac…"
+    },
+    {
+      "seller_id": "ce616e1913288884e7742faac9d981db",
+      "seller_city": "cotia",
+      "seller_state": "SP",
+      "business_segment": "construction_tools_house_garden",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 15.0,
+      "total_gmv": 365.1,
+      "days_since_last_sale": 56.0,
+      "overall_churn_risk": 63.4,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.55,
+      "seller_id_short": "ce616e19…"
+    },
+    {
+      "seller_id": "508808d438fe2ff972ed13bb8f4a82e2",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "home_decor",
+      "lead_behaviour_profile": "cat",
+      "total_orders": 9.0,
+      "total_gmv": 234.84,
+      "days_since_last_sale": 50.0,
+      "overall_churn_risk": 68.7,
+      "risk_category": "High",
+      "urgency": "High",
+      "priority_score": 0.546,
+      "seller_id_short": "508808d4…"
+    },
+    {
+      "seller_id": "d594982fd877af63ace38ea1fca27c76",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "audio_video_electronics",
+      "lead_behaviour_profile": "wolf",
+      "total_orders": 7.0,
+      "total_gmv": 217.04,
+      "days_since_last_sale": 57.0,
+      "overall_churn_risk": 65.2,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.5,
+      "seller_id_short": "d594982f…"
+    },
+    {
+      "seller_id": "d8d9567d0bfb0bc7eb845a205ba42657",
+      "seller_city": "sao paulo",
+      "seller_state": "SP",
+      "business_segment": "books",
+      "lead_behaviour_profile": "wolf",
+      "total_orders": 4.0,
+      "total_gmv": 74.6,
+      "days_since_last_sale": 56.0,
+      "overall_churn_risk": 72.9,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.473,
+      "seller_id_short": "d8d9567d…"
+    },
+    {
+      "seller_id": "05e107217c7266362fd44b75b2cd4cc4",
+      "seller_city": "sao paulo - sp",
+      "seller_state": "SP",
+      "business_segment": "stationery",
+      "lead_behaviour_profile": "wolf",
+      "total_orders": 5.0,
+      "total_gmv": 193.38,
+      "days_since_last_sale": 57.0,
+      "overall_churn_risk": 64.3,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.471,
+      "seller_id_short": "05e10721…"
+    },
+    {
+      "seller_id": "e819bcfade7b5d88a27325eb6cfd62c5",
+      "seller_city": "guarulhos",
+      "seller_state": "SP",
+      "business_segment": "home_decor",
+      "lead_behaviour_profile": "Unknown",
+      "total_orders": 5.0,
+      "total_gmv": 202.9,
+      "days_since_last_sale": 57.0,
+      "overall_churn_risk": 62.3,
+      "risk_category": "High",
+      "urgency": "Immediate",
+      "priority_score": 0.471,
+      "seller_id_short": "e819bcfa…"
+    }
+  ],
+  "model_metrics": {
+    "pre_activation": {
+      "roc_auc": 0.82,
+      "f1_score": 0.91,
+      "precision": 0.89,
+      "recall": 0.93,
+      "accuracy": 0.84
+    },
+    "retention": {
+      "roc_auc": 0.77,
+      "f1_score": 0.85,
+      "precision": 0.83,
+      "recall": 0.87,
+      "accuracy": 0.79
+    },
+    "combined": {
+      "roc_auc": 0.851,
+      "f1_score": 0.922,
+      "precision": 0.943,
+      "recall": 0.902,
+      "accuracy": 0.871
+    }
+  }
+};
+
+        // ── defaults ──
+        Chart.defaults.color = '#8892a4';
+        Chart.defaults.font.family = "'Inter',sans-serif";
+        Chart.defaults.font.size = 12;
+
+        const C = { accent: '#6366f1', accent2: '#818cf8', green: '#10b981', yellow: '#f59e0b', orange: '#f97316', red: '#ef4444', critical: '#dc2626', cyan: '#06b6d4', purple: '#a855f7', border: 'rgba(99,130,255,0.12)', surface2: '#1a2234' };
+        const RISK = { Low: { bg: 'rgba(16,185,129,.15)', bdr: '#10b981', txt: '#6ee7b7' }, Medium: { bg: 'rgba(245,158,11,.15)', bdr: '#f59e0b', txt: '#fcd34d' }, High: { bg: 'rgba(249,115,22,.15)', bdr: '#f97316', txt: '#fdba74' }, Critical: { bg: 'rgba(220,38,38,.18)', bdr: '#dc2626', txt: '#fca5a5' } };
+        const D = DASHBOARD_DATA;
+
+        // ── utils ──
+        const fmt = (n, d = 1) => typeof n === 'number' ? n.toFixed(d) : n;
+        const fmtBRL = n => 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtK = n => n >= 1000 ? (n / 1000).toFixed(1) + 'K' : String(n);
+        const pct = n => fmt(n) + '%';
+
+        // ── init ──
+        document.getElementById('gen-at').textContent = 'Generated ' + D.generated_at;
+
+        // ── Tab switching ──
+        const panels = {};
+        window.switchTab = (id, btn) => {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            btn.classList.add('active');
+            if (!panels[id]) { panels[id] = true; initPanel(id); }
+        };
+
+        function initPanel(id) {
+            if (id === 'overview') return; // already init'd
+            if (id === 'cohort') { buildCohort(); buildCohortGmv(); }
+            if (id === 'segments') { buildSegment(); buildLeadType(); buildProfile(); buildState(); }
+            if (id === 'models') { buildModelComp(); renderModelTabs(); renderMetricBars(activeModel); }
+            if (id === 'interventions') { buildIntSummary(); renderTable(); }
+        }
+
+        // ─── OVERVIEW ───────────────────────────────────────────────────────────────────
+        const kpis = [
+            { lbl: 'Total Sellers', val: D.kpi.total_sellers.toLocaleString(), sub: 'Analyzed in pipeline', icon: '🏪', cls: 'i' },
+            { lbl: 'Overall Churn Rate', val: pct(D.kpi.churn_rate), sub: `${(D.kpi.never_activated + D.kpi.dormant).toLocaleString()} sellers churned`, icon: '📉', cls: 'd' },
+            { lbl: 'GMV at Risk', val: 'R$ ' + fmtK(D.kpi.gmv_at_risk), sub: 'Revenue from churned sellers', icon: '💰', cls: 'w' },
+            { lbl: 'High / Critical Risk', val: D.kpi.high_risk.toLocaleString(), sub: pct(D.kpi.high_risk_pct) + ' of all sellers', icon: '🚨', cls: 'd' },
+            { lbl: 'Active Sellers', val: D.kpi.active.toLocaleString(), sub: 'Only ' + pct(100 - D.kpi.churn_rate) + ' currently active', icon: '✅', cls: 'g' },
+            { lbl: 'GMV Recoverable', val: 'R$ ' + fmtK(D.kpi.projected_gmv_saved), sub: 'With 25% intervention success', icon: '🎯', cls: 'g' },
+        ];
+        const kpiG = document.getElementById('kpi-grid');
+        kpis.forEach(k => { kpiG.innerHTML += `<div class="kpi ${k.cls}"><span class="kpi-icon">${k.icon}</span><div class="kpi-lbl">${k.lbl}</div><div class="kpi-val">${k.val}</div><div class="kpi-sub">${k.sub}</div><div class="kpi-glow"></div></div>`; });
+
+        const insightsData = [
+            { icon: '🔴', val: D.kpi.never_activated.toLocaleString() + ' sellers (' + pct(D.kpi.never_activated / D.kpi.total_sellers * 100) + ')', txt: 'Never placed a single order' },
+            { icon: '🟡', val: D.kpi.dormant.toLocaleString() + ' sellers (' + pct(D.kpi.dormant / D.kpi.total_sellers * 100) + ')', txt: 'No activity in 60+ days' },
+            { icon: '📅', val: 'May 2018 — 73.0% churn', txt: 'Lowest churn rate across cohorts' },
+            { icon: '🗺️', val: 'SP: 232 sellers · 62.5% churn', txt: 'São Paulo dominates volume & best retention' },
+            { icon: '🐱', val: 'Cat profile: 407 sellers · 83.3% churn', txt: 'Most common — but room to retain' },
+        ];
+        const pillsEl = document.getElementById('pills');
+        insightsData.forEach(p => { pillsEl.innerHTML += `<div class="pill"><span class="pi">${p.icon}</span><div><div><span class="pv">${p.val}</span></div><div class="pm">${p.txt}</div></div></div>`; });
+
+        // Status donut
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut', data: {
+                labels: D.status_dist.labels,
+                datasets: [{ data: D.status_dist.values, backgroundColor: ['rgba(220,38,38,.73)', 'rgba(245,158,11,.73)', 'rgba(99,102,241,.73)'], borderColor: ['#dc2626', '#f59e0b', '#6366f1'], borderWidth: 2, hoverOffset: 8 }]
+            }, options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10 } }, tooltip: { callbacks: { label: ctx => { const t = ctx.dataset.data.reduce((a, b) => a + b, 0); return ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${(ctx.parsed / t * 100).toFixed(1)}%)`; } } } } }
+        });
+
+        // Risk donut
+        const rL = D.risk_dist.labels, rBg = rL.map(l => RISK[l]?.bg || '#444'), rBdr = rL.map(l => RISK[l]?.bdr || '#666');
+        new Chart(document.getElementById('riskChart'), { type: 'doughnut', data: { labels: rL, datasets: [{ data: D.risk_dist.values, backgroundColor: rBg, borderColor: rBdr, borderWidth: 2, hoverOffset: 8 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const t = ctx.dataset.data.reduce((a, b) => a + b, 0); return ` ${ctx.label}: ${ctx.parsed.toLocaleString()} (${(ctx.parsed / t * 100).toFixed(1)}%)`; } } } } } });
+        const rl = document.getElementById('risk-legend');
+        rL.forEach((l, i) => { rl.innerHTML += `<div class="rl-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${rBdr[i]}"></span><span style="color:${RISK[l]?.txt}">${l}: ${D.risk_dist.values[i]}</span></div>`; });
+
+        // ─── COHORT ──────────────────────────────────────────────────────────────────
+        function buildCohort() {
+            new Chart(document.getElementById('cohortChart'), {
+                type: 'line', data: {
+                    labels: D.cohort.labels, datasets: [
+                        { label: 'Churn Rate (%)', data: D.cohort.churn, borderColor: C.red, backgroundColor: 'rgba(220,38,38,.08)', borderWidth: 2.5, pointBackgroundColor: C.red, pointRadius: 5, fill: true, tension: .35, yAxisID: 'y' },
+                        { label: 'Activation Rate (%)', data: D.cohort.activation, borderColor: C.green, backgroundColor: 'rgba(16,185,129,.07)', borderWidth: 2, pointBackgroundColor: C.green, pointRadius: 4, fill: true, tension: .35, yAxisID: 'y' }
+                    ]
+                }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { usePointStyle: true, pointStyleWidth: 10 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` } } }, scales: { x: { grid: { color: C.border }, ticks: { maxRotation: 35 } }, y: { grid: { color: C.border }, min: 0, max: 110, ticks: { callback: v => v + '%' } } } }
+            });
+        }
+        function buildCohortGmv() {
+            new Chart(document.getElementById('cohortGmvChart'), {
+                type: 'bar', data: {
+                    labels: D.cohort.labels, datasets: [
+                        { label: 'Total GMV (R$)', data: D.cohort.gmv, backgroundColor: 'rgba(99,102,241,.5)', borderColor: C.accent, borderWidth: 1.5, borderRadius: 4, yAxisID: 'y' },
+                        { label: 'Activation Rate (%)', data: D.cohort.activation, type: 'line', borderColor: C.green, backgroundColor: 'transparent', borderWidth: 2.5, pointBackgroundColor: C.green, pointRadius: 5, tension: .3, yAxisID: 'y2' }
+                    ]
+                }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { usePointStyle: true, pointStyleWidth: 10 } } }, scales: { x: { grid: { color: C.border }, ticks: { maxRotation: 35 } }, y: { grid: { color: C.border }, ticks: { callback: v => 'R$' + fmtK(v) }, position: 'left' }, y2: { grid: { display: false }, ticks: { callback: v => v + '%' }, position: 'right', min: 0, max: 70 } } }
+            });
+        }
+
+        // ─── SEGMENTS ────────────────────────────────────────────────────────────────
+        function buildSegment() {
+            const sc = D.segment.churn.map(v => v >= 90 ? 'rgba(220,38,38,.73)' : v >= 80 ? 'rgba(249,115,22,.73)' : v >= 70 ? 'rgba(245,158,11,.73)' : 'rgba(16,185,129,.68)');
+            const sb = D.segment.churn.map(v => v >= 90 ? '#dc2626' : v >= 80 ? '#f97316' : v >= 70 ? '#f59e0b' : '#10b981');
+            new Chart(document.getElementById('segmentChart'), { type: 'bar', data: { labels: D.segment.labels, datasets: [{ label: 'Churn Rate (%)', data: D.segment.churn, backgroundColor: sc, borderColor: sb, borderWidth: 1.5, borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` Churn: ${ctx.parsed.x.toFixed(1)}% (${D.segment.sellers[ctx.dataIndex]} sellers)` } } }, scales: { x: { grid: { color: C.border }, min: 0, max: 110, ticks: { callback: v => v + '%' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } } } });
+        }
+        function buildLeadType() {
+            new Chart(document.getElementById('leadTypeChart'), { type: 'bar', data: { labels: D.lead_type.labels, datasets: [{ label: 'Churn Rate (%)', data: D.lead_type.churn, backgroundColor: D.lead_type.churn.map(v => v >= 90 ? 'rgba(220,38,38,.7)' : v >= 80 ? 'rgba(249,115,22,.7)' : 'rgba(16,185,129,.7)'), borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` Churn: ${ctx.parsed.y.toFixed(1)}% (${D.lead_type.sellers[ctx.dataIndex]} sellers)` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: C.border }, ticks: { callback: v => v + '%' }, min: 0, max: 110 } } } });
+        }
+        function buildProfile() {
+            new Chart(document.getElementById('profileChart'), {
+                type: 'bar', data: {
+                    labels: D.profile.labels, datasets: [
+                        { label: 'Churn Rate (%)', data: D.profile.churn, backgroundColor: 'rgba(99,102,241,.65)', borderColor: C.accent, borderWidth: 1.5, borderRadius: 5, yAxisID: 'y' },
+                        { label: 'Avg GMV (R$)', data: D.profile.avg_gmv, backgroundColor: 'rgba(16,185,129,.25)', borderColor: C.green, borderWidth: 1.5, borderRadius: 5, yAxisID: 'y2' }
+                    ]
+                }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true, pointStyleWidth: 10 } }, tooltip: { mode: 'index', intersect: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: C.border }, ticks: { callback: v => v + '%' }, position: 'left', title: { display: true, text: 'Churn Rate' } }, y2: { grid: { display: false }, ticks: { callback: v => 'R$' + fmtK(v) }, position: 'right', title: { display: true, text: 'Avg GMV' } } } }
+            });
+        }
+        function buildState() {
+            new Chart(document.getElementById('stateChart'), { type: 'bar', data: { labels: D.state.labels, datasets: [{ label: 'Churn Rate (%)', data: D.state.churn, backgroundColor: D.state.churn.map(v => v === 0 ? 'rgba(16,185,129,.7)' : v < 65 ? 'rgba(16,185,129,.55)' : v < 80 ? 'rgba(245,158,11,.65)' : v < 90 ? 'rgba(249,115,22,.65)' : 'rgba(220,38,38,.7)'), borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` Churn: ${ctx.parsed.y.toFixed(1)}% (${D.state.sellers[ctx.dataIndex]} sellers)` } } }, scales: { x: { grid: { display: false } }, y: { grid: { color: C.border }, ticks: { callback: v => v + '%' }, min: 0, max: 110 } } } });
+        }
+
+        // ─── MODELS ──────────────────────────────────────────────────────────────────
+        function buildModelComp() {
+            const names = Object.keys(D.model_metrics);
+            const labels = { pre_activation: 'Pre-Activation', retention: 'Retention', combined: 'Combined' };
+            const metrics = ['roc_auc', 'f1_score', 'precision', 'recall', 'accuracy'];
+            const colors = [C.accent, C.green, C.cyan, C.yellow, C.purple];
+            const datasets = metrics.map((m, i) => ({ label: m.replace('_', ' ').toUpperCase(), data: names.map(n => D.model_metrics[n]?.[m] ?? 0), backgroundColor: colors[i] + '99', borderColor: colors[i], borderWidth: 1.5, borderRadius: 4 }));
+            new Chart(document.getElementById('modelCompChart'), { type: 'bar', data: { labels: names.map(n => labels[n] || n), datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true, pointStyleWidth: 10, font: { size: 10 } } } }, scales: { x: { grid: { display: false } }, y: { grid: { color: C.border }, min: 0, max: 1, ticks: { callback: v => v.toFixed(2) } } } } });
+        }
+
+        const MM_META = [{ key: 'roc_auc', lbl: 'ROC AUC', cls: 'auc' }, { key: 'f1_score', lbl: 'F1 Score', cls: 'f1' }, { key: 'precision', lbl: 'Precision', cls: 'prec' }, { key: 'recall', lbl: 'Recall', cls: 'rec' }, { key: 'accuracy', lbl: 'Accuracy', cls: 'acc' }];
+        const modelNames = Object.keys(D.model_metrics);
+        let activeModel = modelNames[0];
+
+        function renderModelTabs() {
+            const el = document.getElementById('model-tabs'); el.innerHTML = '';
+            const lbls = { pre_activation: 'Pre-Activation', retention: 'Retention', combined: 'Combined Score' };
+            modelNames.forEach(m => { el.innerHTML += `<button class="mtab ${m === activeModel ? 'active' : ''}" onclick="selModel('${m}',this)">${lbls[m] || m}</button>`; });
+        }
+        function renderMetricBars(m) {
+            const el = document.getElementById('mbars'); el.innerHTML = '';
+            const metrics = D.model_metrics[m] || {};
+            MM_META.forEach(mm => {
+                const v = metrics[mm.key] ?? 0;
+                el.innerHTML += `<div class="mrow"><div class="mrow-hd"><span class="mlbl">${mm.lbl}</span><span class="mnum">${v.toFixed(3)}</span></div><div class="mtrack"><div class="mfill ${mm.cls}" style="width:0%" data-t="${(v * 100).toFixed(1)}%"></div></div></div>`;
+            });
+            requestAnimationFrame(() => document.querySelectorAll('.mfill').forEach(el => el.style.width = el.dataset.t));
+        }
+        window.selModel = (m, btn) => { activeModel = m; document.querySelectorAll('.mtab').forEach(t => t.classList.remove('active')); btn.classList.add('active'); renderMetricBars(m); };
+
+        // ─── INTERVENTIONS ────────────────────────────────────────────────────────────
+        function buildIntSummary() {
+            const data = D.intervention;
+            const crit = data.filter(r => r.risk_category === 'Critical').length;
+            const high = data.filter(r => r.risk_category === 'High').length;
+            const imm = data.filter(r => r.urgency === 'Immediate').length;
+            const gmv = data.reduce((s, r) => s + (r.total_gmv || 0), 0);
+            const items = [
+                { icon: '🏪', lbl: 'Sellers at Risk', val: data.length, cls: 'd' },
+                { icon: '🔴', lbl: 'Critical', val: crit, cls: 'd' },
+                { icon: '🟠', lbl: 'High Risk', val: high, cls: 'w' },
+                { icon: '⚡', lbl: 'Immediate Action', val: imm, cls: 'd' },
+                { icon: '💰', lbl: 'GMV at Risk', val: 'R$ ' + fmtK(gmv), cls: 'w' },
+            ];
+            const el = document.getElementById('int-summary');
+            items.forEach(x => { el.innerHTML += `<div class="kpi ${x.cls}" style="padding:16px"><span class="kpi-icon">${x.icon}</span><div class="kpi-lbl">${x.lbl}</div><div class="kpi-val" style="font-size:1.4rem">${x.val}</div><div class="kpi-glow"></div></div>`; });
+        }
+
+        let tableData = D.intervention.slice();
+        let sortKey = 'priority_score', sortDir = -1, filterCat = 'all', searchVal = '';
+
+        function getRiskClr(c) { return { Critical: '#dc2626', High: '#f97316', Medium: '#f59e0b', Low: '#10b981' }[c] || '#6366f1'; }
+
+        function renderTable() {
+            let rows = tableData.filter(r => {
+                const s = !searchVal || [r.seller_id_short, r.seller_city, r.seller_state, r.business_segment, r.lead_behaviour_profile].some(v => String(v || '').toLowerCase().includes(searchVal));
+                const f = filterCat === 'all' ? true : ['Critical', 'High', 'Medium', 'Low'].includes(filterCat) ? r.risk_category === filterCat : filterCat === 'Immediate' ? r.urgency === 'Immediate' : true;
+                return s && f;
+            });
+            rows.sort((a, b) => { let va = a[sortKey], vb = b[sortKey]; if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); } return va < vb ? sortDir : va > vb ? -sortDir : 0; });
+            document.getElementById('tbl-count').textContent = `Showing ${rows.length} of ${tableData.length} sellers`;
+            const tb = document.getElementById('tbl-body'); tb.innerHTML = '';
+            rows.forEach(r => {
+                const rc = getRiskClr(r.risk_category); const bw = Math.round(r.overall_churn_risk || 0);
+                tb.innerHTML += `<tr>
+      <td class="mono">${r.seller_id_short || '—'}</td>
+      <td>${r.seller_city || '—'}</td>
+      <td><span style="font-weight:600;color:var(--accent2)">${r.seller_state || '—'}</span></td>
+      <td>${r.business_segment || '—'}</td>
+      <td>${r.lead_behaviour_profile || '—'}</td>
+      <td class="mono">${r.total_orders ?? '—'}</td>
+      <td class="mono">${fmtBRL(r.total_gmv || 0)}</td>
+      <td class="mono">${r.days_since_last_sale ?? '—'}</td>
+      <td class="rbar-wrap"><span class="mono">${bw}%</span><div class="rbar"><div class="rbar-fill" style="width:${bw}%;background:${rc}"></div></div></td>
+      <td><span class="rb ${r.risk_category || ''}">${r.risk_category || '—'}</span></td>
+      <td><span class="ub ${r.urgency || ''}">${r.urgency || '—'}</span></td>
+    </tr>`;
+            });
+        }
+        window.sortT = k => { if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; } renderTable(); };
+        window.setF = (cat, btn) => {
+            filterCat = cat;
+            document.querySelectorAll('.ftag').forEach(b => { b.classList.remove('fa', 'on'); });
+            btn.classList.add('on');
+            if (cat === 'all') btn.classList.add('fa');
+            renderTable();
+        };
+        document.getElementById('tbl-search').addEventListener('input', e => { searchVal = e.target.value.toLowerCase().trim(); renderTable(); });
+    </script>
+</body>
+
+</html>
